@@ -1,0 +1,17 @@
+# Input to `python -m ml.dataset`. One entry per source; facts and decisions live in docs/datasets.md.
+# Bump `version` whenever sources or labels change: a prepared version is never rebuilt in place.
+version: v1
+ratios: [0.70, 0.15, 0.15]
+sources:
+  - name: usp-ph-plates-v2
+    path: C:/Users/rapha/CenpAI-data/raw/usp-philippine-license-plates-v2
+    plate_classes: [0]          # names: ['license-plate']
+    labels: human
+    train_only: true            # 38 source images, augmented copies; see docs/datasets.md
+  - name: ph-plate-vehicle-v7
+    path: C:/Users/rapha/CenpAI-data/raw/research-ph-plate-vehicle-v7
+    plate_classes: [7]          # 'license-plate' among 13 classes
+    labels: human
+    train_only: true            # official splits leak; plates unlabeled in many frames
+    require_boxes: true         # keep only frames with a labelled plate
+  # Owner datasets: add them here after /dataset-add. Reviewed OWLv2 drafts use `labels: owlv2-reviewed`.

@@ -1,0 +1,7 @@
+# Training / evaluation / auto-labelling only (never installed in the website image).
+# Exact versions are recorded per run in runs/<name>/release/run.json; pin here once the baseline run succeeds.
+-r requirements.txt
+ultralytics      # YOLO fine-tuning + ONNX export (pulls torch)
+transformers     # OWLv2 zero-shot drafts (ml/autolabel.py)
+pyyaml
+scipy
