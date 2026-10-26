@@ -1,0 +1,27 @@
+# Render Blueprint for ONE Docker web service. Prepared, NOT deployed.
+# Before deploying: put a verified model in models/ (the service reports 503 without one), benchmark the chosen
+# plan (PRD AC05), and set the limits below from that benchmark. Plan IDs per
+# https://render.com/docs/compute-plans ; keys per https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: cenpai
+    runtime: docker
+    plan: free                     # 0.1 CPU / 512 MB, sleeps after 15 min idle; paid plans need owner approval
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz      # 503 until a verified model and ffmpeg are present
+    autoDeployTrigger: "off"       # quoted: bare off is a YAML boolean. Switch to checksPass when deploying.
+    envVars:
+      # Proposed starting caps, to be replaced with benchmarked values (AC05)
+      - key: CENPAI_IMAGE_MAX_MB
+        value: "20"
+      - key: CENPAI_VIDEO_MAX_MB
+        value: "100"
+      - key: CENPAI_VIDEO_MAX_SECONDS
+        value: "60"
+      - key: CENPAI_QUEUE_MAX
+        value: "8"
+      - key: CENPAI_JOB_TIMEOUT_S
+        value: "900"
+      - key: CENPAI_RETENTION_S
+        value: "3300"

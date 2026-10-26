@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Read|mcp__claude_ai_Roboflow__trainings_create|mcp__claude_ai_Roboflow__autolabel_start|mcp__claude_ai_Roboflow__batch_processing_run|mcp__claude_ai_Roboflow__project_deployment_launch|mcp__plugin_vercel_vercel__create_deployment",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\" pre",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.py\" stop",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
