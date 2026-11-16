@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import type { BackendChoice } from '../detect/protocol'
 import { LivePipeline, type LiveStats } from './pipeline'
+import { CanvasRecorder } from './record'
+import { timestampName } from './share'
+
+interface Saved {
+  kind: 'video'
+  url: string
+  name: string
+  blob: Blob
+}
 
 export const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -15,6 +24,58 @@ export default function CameraTab() {
   const [stats, setStats] = useState<LiveStats | null>(null)
   const [size, setSize] = useState<640 | 416>(640)
   const [backend, setBackend] = useState<BackendChoice>('auto')
+  const recorderRef = useRef(new CanvasRecorder())
+  const [recording, setRecording] = useState(false)
+  const [seconds, setSeconds] = useState(0)
+  const [saved, setSaved] = useState<Saved | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const replaceSaved = (next: Saved | null) =>
+    setSaved((old) => {
+      if (old) URL.revokeObjectURL(old.url)
+      return next
+    })
+
+  useEffect(() => {
+    if (!recording) return
+    const t0 = performance.now()
+    const id = window.setInterval(() => setSeconds(Math.floor((performance.now() - t0) / 1000)), 250)
+    return () => window.clearInterval(id)
+  }, [recording])
+
+  // Stop recording and free the saved file when the tab closes.
+  useEffect(() => {
+    const recorder = recorderRef.current
+    return () => recorder.cancel()
+  }, [])
+
+  const toggleRecording = async () => {
+    const recorder = recorderRef.current
+    setNotice(null)
+    if (recorder.recording) {
+      setRecording(false)
+      try {
+        const r = await recorder.stop()
+        const name = timestampName('cenpai', r.extension)
+        replaceSaved({ kind: 'video', url: URL.createObjectURL(r.blob), name, blob: r.blob })
+      } catch (e) {
+        setNotice(e instanceof Error ? e.message : String(e))
+      }
+      return
+    }
+    const canvas = canvasRef.current
+    if (!canvas) return
+    try {
+      recorder.start(canvas)
+      setSeconds(0)
+      setRecording(true)
+    } catch (e) {
+      setNotice(
+        `Recording failed: ${e instanceof Error ? e.message : String(e)} ` +
+          'Use the phone screen recorder instead.',
+      )
+    }
+  }
 
   // Camera and frame loop.
   useEffect(() => {
@@ -111,6 +172,23 @@ export default function CameraTab() {
           </select>
         </label>
       </div>
+      <div className="controls">
+        <button onClick={toggleRecording} disabled={!model && !recording}>
+          {recording ? `Stop (${seconds} s)` : 'Record video'}
+        </button>
+      </div>
+      <p className="status">Video only: live audio is not censored yet.</p>
+      {notice && <p role="status">{notice}</p>}
+      {saved && (
+        <div className="saved" data-testid="saved">
+          <video src={saved.url} controls playsInline />
+          <div className="controls">
+            <a href={saved.url} download={saved.name}>
+              Save {saved.name}
+            </a>
+          </div>
+        </div>
+      )}
       {(cameraError || stats?.error) && <p role="alert">{cameraError ?? stats?.error}</p>}
     </section>
   )
