@@ -24,7 +24,15 @@ export default function CameraTab() {
           return
         }
         stream = s
-        if (videoRef.current) videoRef.current.srcObject = s
+        const video = videoRef.current
+        if (!video) return
+        // Firefox on Android does not start a muted live stream from the autoplay
+        // attribute alone, so set muted on the element and call play() explicitly.
+        video.muted = true
+        video.srcObject = s
+        video
+          .play()
+          .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
     return () => {
