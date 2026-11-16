@@ -19,11 +19,14 @@
   - With step 10 on: "Holding 3-4 frames, 117-139 ms behind" at 21-23 fps. The shutter shows while the model loads.
 - Recordings play back from the phone's Video Player. Frames with a readable plate (Python detector scan, checked by eye): 6/175 before step 10; 4/144 with step 10 on vs 22/174 with `?hold=0` (not a controlled pair).
 
-- Entry test 2026-11-17 (plate on a phone screen, dark room, step 10 on, 120 frames at about 10 fps): covered after 2 uncovered frames on entry, then readable again for 7 frames while the detector lost it.
+- Plate on a phone screen (no printed plate available), Chrome WebGPU 640, step 10 on, every recorded frame checked, 2026-11-17:
+  - Dark room, 120 frames: 2 uncovered frames on entry, then readable again for 7 frames while the detector lost it.
+  - Lights on, plate held still in view, 133 frames: 0 readable (125 masked, 8 shutter-blurred).
+  - Lights on, entry take, 140 frames: covered within about 1 frame once fully in view; 1 single-frame miss; about 17 frames of a plate cut off at the frame edge were never masked.
 
 ## Not yet verified
-- Printed plate at arm's length in normal light (the entry test used a phone screen in a dark room).
-- Recording fully censored: plates the live detector misses still leak with step 10 on, because a result with no boxes still releases frames.
+- A printed plate (only a plate image on a phone screen was used).
+- Recording fully censored: plates cut off at the frame edge, and plates the live detector misses, still leak with step 10 on (a result with no boxes still releases frames).
 - `ml.train`, `ml.autolabel`, and the CLIs of `ml.dataset` and `ml.evaluate` have never been run end to end.
 
 ## Environment quirks

@@ -36,3 +36,4 @@
 - AC07: licenses of the datasets in `docs/datasets.md`; final comparison set; owner datasets; Philippine test set; hosting tier; hypothesis test (with the instructor).
 - Mid-confidence plates the live detector misses still reach recordings with step 10 on; needs a higher-recall model (Phase 5) or detecting on every held frame.
 - The detector masks laptop keyboards as plates (0.3-0.6); add keyboard images as hard negatives in Phase 5.
+- The detector misses plates cut off at the frame edge and plates in a dark room (seen on the S23+ 2026-11-17); add border-cropped and low-light plates in Phase 5.
