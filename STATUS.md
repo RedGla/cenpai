@@ -17,7 +17,7 @@
   - `conf` 0.81 (640) / 0.78 (416): detection, highest confidence with recall at least 0.95.
   - `mask_conf` 0.10 / 0.10: masking, lowest confidence not below 0.10 with precision at least 0.90.
 - Scores (pilot numbers, related images may cross splits) and the yolov8n vs yolo11n comparison: `docs/reports/detector_v0.md`.
-- Not done: Hugging Face upload of the weights (they are on Drive only).
+- The plate detector weights stay on Google Drive (`CenpAI/release/`); there is no Hugging Face upload (decision 25).
 
 ## Phone testing (Firefox, USB)
 `chrome://inspect` port forwarding is Chrome-only, so use `adb reverse` (adb ships with `scrcpy`, installed with `winget install Genymobile.scrcpy`):
