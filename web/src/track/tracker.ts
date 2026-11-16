@@ -56,9 +56,12 @@ export function iou(a: Box, b: Box): number {
   return union > 0 ? inter / union : 0
 }
 
-/** Where the track's box is expected at time `now`, moved along its estimated velocity. */
+/**
+ * Where the track's box is expected at time `now`, moved along its estimated velocity.
+ * `now` may be earlier than the last detection: a held frame released by a later detection.
+ */
 export function predictBox(t: Track, now: number, ttl = TRACK_TTL_MS): Box {
-  const dt = Math.min(Math.max(now - t.lastSeen, 0), ttl)
+  const dt = Math.min(Math.max(now - t.lastSeen, -ttl), ttl)
   const dx = t.vx * dt
   const dy = t.vy * dt
   return { x1: t.box.x1 + dx, y1: t.box.y1 + dy, x2: t.box.x2 + dx, y2: t.box.y2 + dy }
@@ -176,7 +179,8 @@ export function maskRect(
   }
   const longer = Math.max(b.x2 - b.x1, b.y2 - b.y1)
   let pad = Math.max(BASE_PAD_RATIO * longer, MIN_PAD_PX)
-  const frames = Math.min(Math.max(now - t.lastSeen, 0), ttl) / FRAME_MS
+  // Grow for every frame between this one and the detection, before or after it.
+  const frames = Math.min(Math.abs(now - t.lastSeen), ttl) / FRAME_MS
   pad += GROW_PER_FRAME * longer * frames
   return {
     x1: Math.max(0, Math.floor(b.x1 - pad)),

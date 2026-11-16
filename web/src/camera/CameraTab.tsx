@@ -175,7 +175,8 @@ export default function CameraTab() {
     let cancelled = false
     let stream: MediaStream | undefined
     const debug = new URLSearchParams(window.location.search).get('debug') === '1'
-    const pipeline = new LivePipeline(video, canvas, debug)
+    const hold = new URLSearchParams(window.location.search).get('hold') !== '0'
+    const pipeline = new LivePipeline(video, canvas, debug, hold)
     pipelineRef.current = pipeline
     pipeline.start()
     const poll = window.setInterval(() => setStats({ ...pipeline.stats }), 250)
@@ -244,6 +245,11 @@ export default function CameraTab() {
               : 'No model'}
         </span>
         {model?.interimMask && <span data-testid="interim">interim mask threshold</span>}
+        {stats && stats.held > 0 && (
+          <span data-testid="hold">
+            Holding {stats.held} frames ({stats.holdMs.toFixed(0)} ms behind)
+          </span>
+        )}
         {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
       </div>
       <div className="controls">

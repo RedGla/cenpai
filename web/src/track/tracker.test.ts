@@ -164,3 +164,23 @@ describe('mask follows motion safely', () => {
     expect(r.x2).toBeGreaterThanOrEqual(Math.ceil(predictBox(t, 300).x2) + 10)
   })
 })
+
+describe('held frames before the detection', () => {
+  it('masks a frame captured shortly before the detection that released it', () => {
+    let s = updateTracker(emptyTracker(), [det(500, 300, 600, 340)], 0, 0.8)
+    s = updateTracker(s, [det(520, 300, 620, 340)], 100, 0.8) // moving right
+    const t = s.tracks[0]
+    // A frame from 66 ms before the latest detection: the plate was further left.
+    const r = maskRect(t, 34, 1280, 720)
+    expect(r.x1).toBeLessThanOrEqual(Math.floor(predictBox(t, 34).x1))
+    expect(r.x2).toBeGreaterThanOrEqual(620)
+    expect(activeTracks(s, 34)).toHaveLength(1)
+  })
+
+  it('pads a frame before the detection more than the detected frame itself', () => {
+    const s = updateTracker(emptyTracker(), [det(500, 300, 600, 340)], 100, 0.8)
+    const on = maskRect(s.tracks[0], 100, 1280, 720)
+    const before = maskRect(s.tracks[0], 34, 1280, 720)
+    expect(before.x2 - before.x1).toBeGreaterThan(on.x2 - on.x1)
+  })
+})
