@@ -1,0 +1,11 @@
+{
+  "file": "plate_416.onnx",
+  "sha256": "41d576d4d7315068f87cda60d643d7a494b4c47f75c82614d6ad3b6d50191ce8",
+  "imgsz": 416,
+  "conf": 0.78,
+  "iou": 0.5,
+  "names": [
+    "license_plate"
+  ],
+  "version": "v0-yolov8n-416"
+}

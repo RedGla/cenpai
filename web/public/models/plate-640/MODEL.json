@@ -1,0 +1,11 @@
+{
+  "file": "plate_640.onnx",
+  "sha256": "7190eb398899a34d09064a4c46522188cdd5fc9784862bfeef3f4bba49f8907c",
+  "imgsz": 640,
+  "conf": 0.81,
+  "iou": 0.5,
+  "names": [
+    "license_plate"
+  ],
+  "version": "v0-yolov8n-640"
+}
