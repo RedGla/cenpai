@@ -19,3 +19,6 @@ graphify-out/
 .res.txt
 .docker_build.txt
 .app.log
+
+# onnxruntime-web runtime files are copied here at dev/build time
+web/public/ort/
