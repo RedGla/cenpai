@@ -2,7 +2,7 @@
 // Detector worker: loads the model, checks its SHA-256 against MODEL.json, and runs one
 // inference at a time. Frames arrive as ImageBitmaps and are always closed after use.
 import * as ort from 'onnxruntime-web/webgpu'
-import { PAD_VALUE, letterboxParams, rgbaToTensor } from './letterbox'
+import { PAD_VALUE, letterboxToTensor } from './letterbox'
 import { postprocess } from './postprocess'
 import type { BackendUsed, FromWorker, ToWorker } from './protocol'
 import type { Detection, ModelMeta } from './types'
@@ -21,6 +21,8 @@ let meta: ModelMeta | null = null
 let size = 640
 let maskConf = 0.25
 let inputName = 'images'
+/** Full-size copy of the frame, read back as raw pixels (no browser scaling). */
+let frameCanvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
 let tensorBuf: Float32Array | null = null
 
@@ -73,7 +75,8 @@ async function init(msg: Extract<ToWorker, { type: 'init' }>) {
     meta = loaded.meta
     size = meta.imgsz
     maskConf = meta.mask_conf ?? msg.maskConf
-    ctx = new OffscreenCanvas(size, size).getContext('2d', { willReadFrequently: true })
+    frameCanvas = new OffscreenCanvas(1, 1)
+    ctx = frameCanvas.getContext('2d', { willReadFrequently: true })
     tensorBuf = new Float32Array(3 * size * size)
     const order: BackendUsed[] = msg.backend === 'auto' ? ['webgpu', 'wasm'] : [msg.backend]
     let lastErr = ''
@@ -112,14 +115,13 @@ async function pipeline(
   const t0 = performance.now()
   const w = bitmap.width
   const h = bitmap.height
-  const lb = letterboxParams(w, h, size)
+  if (frameCanvas!.width !== w || frameCanvas!.height !== h) {
+    frameCanvas!.width = w
+    frameCanvas!.height = h
+  }
   const c = ctx!
-  c.fillStyle = `rgb(${PAD_VALUE},${PAD_VALUE},${PAD_VALUE})`
-  c.fillRect(0, 0, size, size)
-  c.imageSmoothingEnabled = true
-  c.imageSmoothingQuality = 'medium'
-  c.drawImage(bitmap, lb.padX, lb.padY, lb.newW, lb.newH)
-  rgbaToTensor(c.getImageData(0, 0, size, size).data, size, tensorBuf!)
+  c.drawImage(bitmap, 0, 0)
+  const { lb } = letterboxToTensor(c.getImageData(0, 0, w, h).data, w, h, size, tensorBuf!)
   const t1 = performance.now()
   const { data, n } = await runRaw(tensorBuf!)
   const t2 = performance.now()
