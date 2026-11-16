@@ -25,6 +25,7 @@
 | 21 | Training: we fine-tune our own models (ML course requirement): plate detectors and text classifiers. Compute is free Colab or Kaggle only. | Plan §1, §8. |
 | 22 | Lost with the previous laptop: all raw data, the paper's `best.pt` and `CenpAI_Final.ipynb`, and the local `old-main` branch (decision 15). | Phase 1 retrains from a fresh download and becomes the new baseline; the paper's pilot numbers can no longer be reproduced. `ml/datasets.yaml` still points to the dead laptop's path; fixed in Phase 5. |
 | 23 | Storage rule: raw data and checkpoints in Google Drive, released weights on Hugging Face, notebooks and manifests in Git. | Nothing important lives only on a laptop. |
+| 24 | v3 plate detector is **yolov8n v0** (COCO weights fine-tuned on PH BB v5), served as ONNX from `web/public/models/plate-640/` and `plate-416/`. Two thresholds in each `MODEL.json`: `conf` 0.81 (640) / 0.78 (416) for detection, chosen by decision 5; `mask_conf` 0.10 / 0.10 for masking, the lowest confidence not below 0.10 with validation precision at least 0.90. | Replaces decision 1's YOLO11n baseline for v3. yolov8n and yolo11n tied on validation recall at 640; the yolo11n 640 file missed a plate on a sample image in the serving check (`cenpai.detector`), so yolov8n ships. Both thresholds come from validation only; test scores and the pilot caveat are in `docs/reports/detector_v0.md`. |
 
 ## Open
 - AC07: licenses of the datasets in `docs/datasets.md`; final comparison set; owner datasets; Philippine test set; hosting tier; hypothesis test (with the instructor).
