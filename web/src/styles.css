@@ -48,3 +48,29 @@ canvas.view {
   margin: 0.25rem 0;
   font-variant-numeric: tabular-nums;
 }
+.status-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.pill {
+  padding: 0 0.6rem;
+  border-radius: 1rem;
+  background: #a33;
+}
+.pill.on {
+  background: #0a7;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0;
+}
+.controls button,
+.controls select {
+  min-height: 2.5rem;
+  font-size: 1rem;
+}
