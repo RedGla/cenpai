@@ -18,6 +18,13 @@
 | 14 | No model → app starts, `/healthz` 503, uploads refused. Dev stub (`CENPAI_DEV_STUB=1`) refused on Render. | FR02: no fabricated detections in production. |
 | 15 | History restarted on 2026-10-26 (orphan `main`); previous history kept locally on branch `old-main`. | Owner request: start from scratch, keep good files. |
 | 16 | Claude Code: project subagents on per-task models; hooks guard secrets/data and ask before push/deploy/paid actions. | Replaces v1.0's "Sonnet only, no parallel agents". |
+| 17 | v3 deadline: working demo Tue 2026-11-17. | Plan §1. Phases 0-4 happen on 2026-11-16; the rest comes after the demo. |
+| 18 | App form: mobile web app (PWA) with models running on the phone; Chrome on Android is the reference, laptop Chrome the fallback. | Plan §1. Camera needs HTTPS or `localhost`. Replaces the Render upload site. |
+| 19 | "Live" means a live camera preview with plates covered, plus censored recording and photo. No broadcasting to social platforms. | Plan §1. |
+| 20 | Audio: speech-to-text (pretrained Whisper), then a Tagalog profanity classifier we fine-tune. Strict is the default mode, Smart the toggle. | Plan §1, §8. |
+| 21 | Training: we fine-tune our own models (ML course requirement): plate detectors and text classifiers. Compute is free Colab or Kaggle only. | Plan §1, §8. |
+| 22 | Lost with the previous laptop: all raw data, the paper's `best.pt` and `CenpAI_Final.ipynb`, and the local `old-main` branch (decision 15). | Phase 1 retrains from a fresh download and becomes the new baseline; the paper's pilot numbers can no longer be reproduced. `ml/datasets.yaml` still points to the dead laptop's path; fixed in Phase 5. |
+| 23 | Storage rule: raw data and checkpoints in Google Drive, released weights on Hugging Face, notebooks and manifests in Git. | Nothing important lives only on a laptop. |
 
 ## Open
 - AC07: licenses of the datasets in `docs/datasets.md`; final comparison set; owner datasets; Philippine test set; hosting tier; hypothesis test (with the instructor).
