@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { DetectorClient, type ReadyInfo } from '../detect/client'
+import type { Detection } from '../detect/types'
 
 export const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -15,6 +17,29 @@ export default function CameraTab() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [fps, setFps] = useState(0)
+  const [model, setModel] = useState<ReadyInfo | null>(null)
+  const [stats, setStats] = useState({ inferMs: 0, boxes: 0 })
+
+  const detectorRef = useRef<DetectorClient | null>(null)
+  const lastRef = useRef<{ detections: Detection[]; at: number } | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    const client = new DetectorClient()
+    detectorRef.current = client
+    client
+      .init(640, 'auto')
+      .then((info) => alive && setModel(info))
+      .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)))
+    return () => {
+      alive = false
+      detectorRef.current = null
+      client.terminate()
+    }
+  }, [])
+
+  const readyRef = useRef(false)
+  readyRef.current = model !== null
 
   useEffect(() => {
     let stream: MediaStream | undefined
@@ -42,6 +67,21 @@ export default function CameraTab() {
           canvas.height = video.videoHeight
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        // One inference at a time: frames that arrive while the detector is busy are skipped.
+        const det = detectorRef.current
+        if (det && readyRef.current && !det.busy) {
+          det.busy = true
+          createImageBitmap(video)
+            .then((bmp) => det.detect(bmp))
+            .then((r) => {
+              lastRef.current = { detections: r.detections, at: performance.now() }
+              setStats({ inferMs: r.inferMs, boxes: r.detections.length })
+            })
+            .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))
+            .finally(() => {
+              det.busy = false
+            })
+        }
       }
       frames += 1
       const t = performance.now()
@@ -95,6 +135,11 @@ export default function CameraTab() {
       <canvas ref={canvasRef} className="view" data-testid="camera-canvas" />
       <p className="status" data-testid="fps">
         {fps} fps
+      </p>
+      <p className="status" data-testid="model-status">
+        {model
+          ? `${model.backend} ${model.size}px, ${stats.inferMs.toFixed(0)} ms, ${stats.boxes} boxes`
+          : 'loading model'}
       </p>
       {error && <p role="alert">{error}</p>}
     </section>
