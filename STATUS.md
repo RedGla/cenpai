@@ -15,14 +15,15 @@
   - Chrome 157, WebGPU 640: Benchmark median 108.1 ms, p95 111.5 ms (whole frame median 158.4 ms).
   - Chrome 157, WebAssembly 416, 4 threads: median 144.1 ms, p95 167.9 ms (whole frame 201.1 ms).
   - Firefox 160 on the phone has no WebGPU; single-threaded WebAssembly read about 413 ms (640) and 200-300 ms (416) live.
-  - Firefox on the laptop: WebGPU 640, about 75 ms per inference live, 20 fps.
+  - Firefox on the laptop, WebGPU 640: Benchmark median 92.7 ms, p95 95.9 ms (whole frame median 100.3 ms), 2026-11-17.
   - With step 10 on: "Holding 3-4 frames, 117-139 ms behind" at 21-23 fps. The shutter shows while the model loads.
 - Recordings play back from the phone's Video Player. Frames with a readable plate (Python detector scan, checked by eye): 6/175 before step 10; 4/144 with step 10 on vs 22/174 with `?hold=0` (not a controlled pair).
 
+- Entry test 2026-11-17 (plate on a phone screen, dark room, step 10 on, 120 frames at about 10 fps): covered after 2 uncovered frames on entry, then readable again for 7 frames while the detector lost it.
+
 ## Not yet verified
-- Printed plate at arm's length covered within 2 frames (needs the user).
-- Firefox laptop Benchmark numbers (Claude can only view Firefox, not click).
-- Recording fully censored: mid-confidence plates (0.32-0.64) the live detector misses still leak with step 10 on.
+- Printed plate at arm's length in normal light (the entry test used a phone screen in a dark room).
+- Recording fully censored: plates the live detector misses still leak with step 10 on, because a result with no boxes still releases frames.
 - `ml.train`, `ml.autolabel`, and the CLIs of `ml.dataset` and `ml.evaluate` have never been run end to end.
 
 ## Environment quirks
