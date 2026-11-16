@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import type { BackendChoice } from '../detect/protocol'
 import { LivePipeline, type LiveStats } from './pipeline'
 import { CanvasRecorder } from './record'
+import { median, percentile } from './stats'
 import { shareFile, timestampName } from './share'
+
+interface BenchResult {
+  backend: string
+  size: number
+  runs: number
+  inferMedian: number
+  inferP95: number
+  totalMedian: number
+}
 
 interface Saved {
   kind: 'video' | 'photo'
@@ -29,6 +39,31 @@ export default function CameraTab() {
   const [seconds, setSeconds] = useState(0)
   const [saved, setSaved] = useState<Saved | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [bench, setBench] = useState<BenchResult | null>(null)
+  const [benchRunning, setBenchRunning] = useState(false)
+
+  const runBenchmark = async () => {
+    const pipeline = pipelineRef.current
+    if (!pipeline) return
+    setNotice(null)
+    setBench(null)
+    setBenchRunning(true)
+    try {
+      const r = await pipeline.benchmark(50)
+      setBench({
+        backend: r.model.backend,
+        size: r.model.size,
+        runs: r.inferMs.length,
+        inferMedian: median(r.inferMs),
+        inferP95: percentile(r.inferMs, 95),
+        totalMedian: median(r.totalMs),
+      })
+    } catch (e) {
+      setNotice(`Benchmark failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setBenchRunning(false)
+    }
+  }
 
   const replaceSaved = (next: Saved | null) =>
     setSaved((old) => {
@@ -217,7 +252,17 @@ export default function CameraTab() {
         <button onClick={takePhoto} disabled={!model || recording}>
           Take photo
         </button>
+        <button onClick={runBenchmark} disabled={!model || recording || benchRunning}>
+          {benchRunning ? 'Benchmarking' : 'Benchmark'}
+        </button>
       </div>
+      {bench && (
+        <p className="status" data-testid="bench">
+          Benchmark, {bench.runs} inferences, backend {bench.backend}, input {bench.size} px:
+          median {bench.inferMedian.toFixed(1)} ms, 95th percentile {bench.inferP95.toFixed(1)} ms
+          (whole frame incl. resize and decode: median {bench.totalMedian.toFixed(1)} ms)
+        </p>
+      )}
       <p className="status">Video only: live audio is not censored yet.</p>
       {notice && <p role="status">{notice}</p>}
       {saved && (
