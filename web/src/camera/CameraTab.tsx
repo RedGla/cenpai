@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BackendChoice } from '../detect/protocol'
+import type { BackendChoice, ModelSize } from '../detect/protocol'
 import { LivePipeline, type LiveStats } from './pipeline'
 import { CanvasRecorder } from './record'
 import { median, percentile } from './stats'
@@ -28,11 +28,12 @@ export const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
 
 /** Optional start-up choice from the address, e.g. ?size=416&backend=wasm. */
 export function initialOptions(search = window.location.search): {
-  size: 640 | 416
+  size: ModelSize
   backend: BackendChoice
 } {
   const q = new URLSearchParams(search)
-  const size = q.get('size') === '416' ? 416 : 640
+  const s = q.get('size')
+  const size: ModelSize = s === '416' ? 416 : s === '640' ? 640 : 'auto'
   const b = q.get('backend')
   const backend: BackendChoice = b === 'webgpu' || b === 'wasm' ? b : 'auto'
   return { size, backend }
@@ -44,7 +45,7 @@ export default function CameraTab() {
   const pipelineRef = useRef<LivePipeline | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [stats, setStats] = useState<LiveStats | null>(null)
-  const [size, setSize] = useState<640 | 416>(() => initialOptions().size)
+  const [size, setSize] = useState<ModelSize>(() => initialOptions().size)
   const [backend, setBackend] = useState<BackendChoice>(() => initialOptions().backend)
   const recorderRef = useRef(new CanvasRecorder())
   const [recording, setRecording] = useState(false)
@@ -236,7 +237,10 @@ export default function CameraTab() {
           {stats?.loading
             ? 'Loading model'
             : model
-              ? `Backend: ${model.backend}, ${model.size} px`
+              ? `Backend: ${model.backend}, ${model.size} px, ` +
+                `isolated: ${model.isolated ? 'yes' : 'no'}, ` +
+                `threads: ${model.threads}` +
+                (model.skipped.length ? ` (skipped ${model.skipped.join('; ')})` : '')
               : 'No model'}
         </span>
         {model?.interimMask && <span data-testid="interim">interim mask threshold</span>}
@@ -253,7 +257,13 @@ export default function CameraTab() {
         </label>
         <label>
           Input{' '}
-          <select value={size} onChange={(e) => setSize(Number(e.target.value) as 640 | 416)}>
+          <select
+            value={size}
+            onChange={(e) =>
+              setSize(e.target.value === 'auto' ? 'auto' : (Number(e.target.value) as 640 | 416))
+            }
+          >
+            <option value="auto">Auto (640 on WebGPU, 416 on WebAssembly)</option>
             <option value={640}>640</option>
             <option value={416}>416</option>
           </select>

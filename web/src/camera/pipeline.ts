@@ -1,5 +1,5 @@
 import { DetectorClient, type ReadyInfo } from '../detect/client'
-import type { BackendChoice } from '../detect/protocol'
+import type { BackendChoice, ModelSize } from '../detect/protocol'
 import {
   activeTracks,
   countPlates,
@@ -100,7 +100,7 @@ export class LivePipeline {
   }
 
   /** (Re)load the model. The shutter stays closed until the first result from the new model. */
-  async loadModel(size: 640 | 416, backend: BackendChoice) {
+  async loadModel(size: ModelSize, backend: BackendChoice) {
     const gen = ++this.generation
     this.client?.terminate()
     this.client = new DetectorClient()

@@ -8,9 +8,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
-    "format": "prettier --write .",
-    "predev": "node scripts/copy-ort.mjs",
-    "prebuild": "node scripts/copy-ort.mjs"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "onnxruntime-web": "1.31.1",
