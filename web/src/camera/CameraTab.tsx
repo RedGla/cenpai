@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { BackendChoice } from '../detect/protocol'
 import { LivePipeline, type LiveStats } from './pipeline'
 import { CanvasRecorder } from './record'
-import { timestampName } from './share'
+import { shareFile, timestampName } from './share'
 
 interface Saved {
-  kind: 'video'
+  kind: 'video' | 'photo'
   url: string
   name: string
   blob: Blob
@@ -48,6 +48,44 @@ export default function CameraTab() {
     const recorder = recorderRef.current
     return () => recorder.cancel()
   }, [])
+
+  const takePhoto = () => {
+    const canvas = canvasRef.current
+    // The canvas only ever holds a censored frame, and a closed shutter is a blurred frame.
+    // A photo of the shutter is useless, so wait until the shield is on.
+    if (!canvas || pipelineRef.current?.stats.shutter !== false) {
+      setNotice('Wait for the shield to turn on, then take the photo.')
+      return
+    }
+    setNotice(null)
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setNotice('Could not save the photo.')
+          return
+        }
+        replaceSaved({
+          kind: 'photo',
+          url: URL.createObjectURL(blob),
+          name: timestampName('cenpai', 'jpg'),
+          blob,
+        })
+      },
+      'image/jpeg',
+      0.92,
+    )
+  }
+
+  const share = async () => {
+    if (!saved) return
+    try {
+      const file = new File([saved.blob], saved.name, { type: saved.blob.type })
+      const outcome = await shareFile(file, 'CenpAI')
+      if (outcome === 'unsupported') setNotice('Sharing is not available here. Use Save instead.')
+    } catch (e) {
+      setNotice(`Share failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
 
   const toggleRecording = async () => {
     const recorder = recorderRef.current
@@ -176,16 +214,24 @@ export default function CameraTab() {
         <button onClick={toggleRecording} disabled={!model && !recording}>
           {recording ? `Stop (${seconds} s)` : 'Record video'}
         </button>
+        <button onClick={takePhoto} disabled={!model || recording}>
+          Take photo
+        </button>
       </div>
       <p className="status">Video only: live audio is not censored yet.</p>
       {notice && <p role="status">{notice}</p>}
       {saved && (
         <div className="saved" data-testid="saved">
-          <video src={saved.url} controls playsInline />
+          {saved.kind === 'video' ? (
+            <video src={saved.url} controls playsInline />
+          ) : (
+            <img src={saved.url} alt="Censored photo" />
+          )}
           <div className="controls">
             <a href={saved.url} download={saved.name}>
               Save {saved.name}
             </a>
+            <button onClick={share}>Share</button>
           </div>
         </div>
       )}
