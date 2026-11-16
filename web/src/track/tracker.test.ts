@@ -93,10 +93,12 @@ describe('padding', () => {
     expect(r).toEqual({ x1: 496, y1: 296, x2: 524, y2: 314 })
   })
 
-  it('grows each frame while unseen, and not while seen', () => {
+  it('grows each frame after the detected frame, while the detector has not seen it', () => {
     let s = updateTracker(emptyTracker(), [det(500, 300, 600, 340)], 0, 0.8)
-    const seen = maskRect(s.tracks[0], 100, frame.w, frame.h)
-    expect(seen.x2 - seen.x1).toBe(120)
+    const onFrame = maskRect(s.tracks[0], 0, frame.w, frame.h)
+    expect(onFrame.x2 - onFrame.x1).toBe(120)
+    const later = maskRect(s.tracks[0], 100, frame.w, frame.h)
+    expect(later.x2 - later.x1).toBeGreaterThan(120)
     s = updateTracker(s, [], 33, 0.8)
     const w1 = maskRect(s.tracks[0], 66, frame.w, frame.h)
     const w2 = maskRect(s.tracks[0], 133, frame.w, frame.h)

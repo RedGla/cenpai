@@ -35,8 +35,12 @@ export const MATCH_IOU = 0.2
 /** Mask padding as a share of the box's longer side, with a floor in pixels. */
 export const BASE_PAD_RATIO = 0.1
 export const MIN_PAD_PX = 4
-/** Extra padding per frame-time (1/30 s) spent unseen, as a share of the longer side. */
-export const GROW_PER_FRAME = 0.02
+/**
+ * Extra padding per frame-time (1/30 s) since the frame the box was detected on, as a share of
+ * the longer side. Every frame drawn after that one is unseen by the detector, and on a slow
+ * backend that is 4 to 6 frames, so the mask must widen to keep up with a moving phone.
+ */
+export const GROW_PER_FRAME = 0.04
 export const FRAME_MS = 1000 / 30
 /** Velocity smoothing: share of the new measurement. */
 const VELOCITY_BLEND = 0.5
@@ -153,8 +157,8 @@ export function keepTimeFor(intervalMs: number): number {
  * The rectangle to paint for a track at time `now`, clipped to the frame.
  * It covers both the last detected box and the box moved along the estimated motion, so a
  * wrong motion estimate cannot slide the mask off the plate.
- * Padding is 10% of the longer side (at least 4 px). While the track is unseen it grows
- * by GROW_PER_FRAME of the longer side for every 1/30 s since it was last seen.
+ * Padding is 10% of the longer side (at least 4 px), plus GROW_PER_FRAME of the longer side
+ * for every 1/30 s since the frame the box was last detected on.
  */
 export function maskRect(
   t: Track,
@@ -172,10 +176,8 @@ export function maskRect(
   }
   const longer = Math.max(b.x2 - b.x1, b.y2 - b.y1)
   let pad = Math.max(BASE_PAD_RATIO * longer, MIN_PAD_PX)
-  if (t.missed > 0) {
-    const frames = Math.max(now - t.lastSeen, 0) / FRAME_MS
-    pad += GROW_PER_FRAME * longer * frames
-  }
+  const frames = Math.min(Math.max(now - t.lastSeen, 0), ttl) / FRAME_MS
+  pad += GROW_PER_FRAME * longer * frames
   return {
     x1: Math.max(0, Math.floor(b.x1 - pad)),
     y1: Math.max(0, Math.floor(b.y1 - pad)),
