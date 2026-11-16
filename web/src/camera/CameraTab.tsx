@@ -26,14 +26,26 @@ export const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   audio: false,
 }
 
+/** Optional start-up choice from the address, e.g. ?size=416&backend=wasm. */
+export function initialOptions(search = window.location.search): {
+  size: 640 | 416
+  backend: BackendChoice
+} {
+  const q = new URLSearchParams(search)
+  const size = q.get('size') === '416' ? 416 : 640
+  const b = q.get('backend')
+  const backend: BackendChoice = b === 'webgpu' || b === 'wasm' ? b : 'auto'
+  return { size, backend }
+}
+
 export default function CameraTab() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pipelineRef = useRef<LivePipeline | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [stats, setStats] = useState<LiveStats | null>(null)
-  const [size, setSize] = useState<640 | 416>(640)
-  const [backend, setBackend] = useState<BackendChoice>('auto')
+  const [size, setSize] = useState<640 | 416>(() => initialOptions().size)
+  const [backend, setBackend] = useState<BackendChoice>(() => initialOptions().backend)
   const recorderRef = useRef(new CanvasRecorder())
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
@@ -161,7 +173,8 @@ export default function CameraTab() {
     }
     let cancelled = false
     let stream: MediaStream | undefined
-    const pipeline = new LivePipeline(video, canvas)
+    const debug = new URLSearchParams(window.location.search).get('debug') === '1'
+    const pipeline = new LivePipeline(video, canvas, debug)
     pipelineRef.current = pipeline
     pipeline.start()
     const poll = window.setInterval(() => setStats({ ...pipeline.stats }), 250)
@@ -227,6 +240,7 @@ export default function CameraTab() {
               : 'No model'}
         </span>
         {model?.interimMask && <span data-testid="interim">interim mask threshold</span>}
+        {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
       </div>
       <div className="controls">
         <label>

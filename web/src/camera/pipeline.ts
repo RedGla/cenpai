@@ -23,6 +23,8 @@ export interface LiveStats {
   loading: boolean
   model: ReadyInfo | null
   error: string | null
+  /** Diagnostics for ?debug=1: canvas size and the frame size the detector saw. */
+  debug: string
 }
 
 type FrameVideo = HTMLVideoElement & {
@@ -58,11 +60,13 @@ export class LivePipeline {
     loading: true,
     model: null,
     error: null,
+    debug: '',
   }
 
   constructor(
     private video: FrameVideo,
     private canvas: HTMLCanvasElement,
+    private debug = false,
   ) {}
 
   get stats(): LiveStats {
@@ -158,11 +162,24 @@ export class LivePipeline {
           ctx.fillRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1)
         }
         this.s.plates = countPlates(this.tracker, now)
+        if (this.debug) this.drawDebug(ctx, now)
       }
       this.dispatchDetection(now)
     }
     this.countFps()
     this.callbackId = video.requestVideoFrameCallback!(this.onFrame)
+  }
+
+  /** Debug only: outline each tracked box with its score (drawn on top of the masks). */
+  private drawDebug(ctx: CanvasRenderingContext2D, now: number) {
+    ctx.lineWidth = 4
+    ctx.font = 'bold 28px sans-serif'
+    for (const t of activeTracks(this.tracker, now)) {
+      ctx.strokeStyle = t.confirmed ? '#0f0' : '#ff0'
+      ctx.strokeRect(t.box.x1, t.box.y1, t.box.x2 - t.box.x1, t.box.y2 - t.box.y1)
+      ctx.fillStyle = ctx.strokeStyle
+      ctx.fillText(t.score.toFixed(2), t.box.x1, Math.max(28, t.box.y1 - 6))
+    }
   }
 
   /** Whole-frame blur: shrink the frame to a few dozen pixels and stretch it back. */
@@ -193,6 +210,9 @@ export class LivePipeline {
       .then((r) => {
         if (gen !== this.generation) return
         this.tracker = updateTracker(this.tracker, r.detections, captureTime, model.meta.conf)
+        this.s.debug =
+          `canvas ${this.canvas.width}x${this.canvas.height}, ` +
+          `detector frame ${r.frameW}x${r.frameH}, ${r.detections.length} raw boxes`
         this.haveResult = true
         this.lastResultAt = performance.now()
         this.s.inferMs = this.s.inferMs === null ? r.inferMs : 0.8 * this.s.inferMs + 0.2 * r.inferMs

@@ -15,6 +15,8 @@ export interface DetectResult {
   detections: Detection[]
   inferMs: number
   totalMs: number
+  frameW: number
+  frameH: number
 }
 
 export const INTERIM_MASK_CONF = 0.25
@@ -92,7 +94,13 @@ export class DetectorClient {
   async detect(bitmap: ImageBitmap): Promise<DetectResult> {
     const m = await this.request((id) => ({ type: 'detect', id, bitmap }), bitmap)
     if (m.type !== 'result') throw new Error('unexpected worker reply')
-    return { detections: m.detections, inferMs: m.inferMs, totalMs: m.totalMs }
+    return {
+      detections: m.detections,
+      inferMs: m.inferMs,
+      totalMs: m.totalMs,
+      frameW: m.frameW,
+      frameH: m.frameH,
+    }
   }
 
   async bench(bitmap: ImageBitmap, runs: number): Promise<{ inferMs: number[]; totalMs: number[] }> {

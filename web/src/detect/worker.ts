@@ -102,7 +102,13 @@ async function init(msg: Extract<ToWorker, { type: 'init' }>) {
 /** Letterbox the frame, run the model, decode. Timings in ms. */
 async function pipeline(
   bitmap: ImageBitmap,
-): Promise<{ detections: Detection[]; inferMs: number; totalMs: number }> {
+): Promise<{
+  detections: Detection[]
+  inferMs: number
+  totalMs: number
+  frameW: number
+  frameH: number
+}> {
   const t0 = performance.now()
   const w = bitmap.width
   const h = bitmap.height
@@ -118,7 +124,7 @@ async function pipeline(
   const { data, n } = await runRaw(tensorBuf!)
   const t2 = performance.now()
   const detections = postprocess(data, n, lb, w, h, maskConf, meta!.iou)
-  return { detections, inferMs: t2 - t1, totalMs: performance.now() - t0 }
+  return { detections, inferMs: t2 - t1, totalMs: performance.now() - t0, frameW: w, frameH: h }
 }
 
 self.onmessage = async (ev: MessageEvent<ToWorker>) => {
