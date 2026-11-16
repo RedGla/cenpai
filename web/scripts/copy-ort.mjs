@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const src = join(root, 'node_modules', 'onnxruntime-web', 'dist')
 const dst = join(root, 'public', 'ort')
-// The onnxruntime-web/webgpu build loads this loader and binary for both WebGPU and WebAssembly.
-const files = ['ort-wasm-simd-threaded.asyncify.mjs', 'ort-wasm-simd-threaded.asyncify.wasm']
+// The onnxruntime-web/webgpu build uses this one binary for both WebGPU and WebAssembly.
+// Its loader script is built into the bundle, so only the .wasm is served from here.
+const files = ['ort-wasm-simd-threaded.asyncify.wasm']
 
 mkdirSync(dst, { recursive: true })
 for (const f of files) {

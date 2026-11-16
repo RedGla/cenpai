@@ -9,10 +9,9 @@ import type { Detection, ModelMeta } from './types'
 
 const base = import.meta.env.BASE_URL
 const ortBase = `${base}ort/`
-ort.env.wasm.wasmPaths = {
-  mjs: `${ortBase}ort-wasm-simd-threaded.asyncify.mjs`,
-  wasm: `${ortBase}ort-wasm-simd-threaded.asyncify.wasm`,
-}
+// Only the binary's URL is given: the bundled build then uses its built-in loader script.
+// Pointing `mjs` at public/ breaks the Vite dev server, which refuses to import files from public/.
+ort.env.wasm.wasmPaths = { wasm: `${ortBase}ort-wasm-simd-threaded.asyncify.wasm` }
 ort.env.logLevel = 'error'
 
 const send = (msg: FromWorker) => self.postMessage(msg)
