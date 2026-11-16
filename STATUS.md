@@ -8,6 +8,14 @@
 - `develop` integration branch, attribution turned off in `.claude/settings.json`, `CONTRIBUTING.md`, commit and branch rules in `CLAUDE.md`.
 - `web/` scaffolded (Vite, React, TypeScript, Vitest, Prettier): Camera tab shows the rear camera, Audio tab is a placeholder, one smoke test. CI has a `web` job beside the Python job.
 - `cenpai/`, `ml/`, and `tests/` untouched.
+- Verified 2026-11-16: the Camera tab shows the live rear camera in Firefox on the Samsung Galaxy S23+ (SM-S916B, Android 17). Firefox needed an explicit `video.play()`; the `autoplay` attribute alone left the preview black.
+
+## Phone testing (Firefox, USB)
+`chrome://inspect` port forwarding is Chrome-only, so use `adb reverse` (adb ships with `scrcpy`, installed with `winget install Genymobile.scrcpy`):
+1. Phone: turn on USB debugging, connect by USB, accept the prompt. Laptop: `adb devices` shows `device`.
+2. `cd web && npm run dev -- --host 127.0.0.1` (adb forwards to IPv4; plain `npm run dev` may listen only on `::1`).
+3. `adb reverse tcp:5173 tcp:5173`, then open `http://localhost:5173` in Firefox on the phone and allow the camera.
+4. Optional: `scrcpy --no-audio` mirrors the phone screen on the laptop.
 
 ## Next
 1. Phase 1: plate detector v0 in Colab (`notebooks/train_detector_v0.ipynb`).
@@ -16,7 +24,7 @@
 Phases 1, 2, and 3 run in parallel; see `docs/PLAN.md` section 4.
 
 ## Not yet verified
-- The Camera tab on the demo phone (Samsung Galaxy S23+).
+- The app in Chrome on Android. The team uses Firefox on the phone, while `docs/PLAN.md` names Chrome as the reference; Phase 2 should check WebGPU in Firefox for Android or fall back to WebAssembly.
 - `ml.train`, `ml.autolabel`, and the CLIs of `ml.dataset` and `ml.evaluate` have never been run end to end.
 
 ## Blockers
