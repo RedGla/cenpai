@@ -43,6 +43,10 @@ export class LivePipeline {
   private lastResultAt = 0
   private callbackId = 0
   private stopped = false
+  /** Live detection is paused (benchmark running). */
+  private paused = false
+  /** The live detection in flight, if any. */
+  private inflight: Promise<void> | null = null
   private frames = 0
   private windowStart = performance.now()
   private tiny = document.createElement('canvas')
@@ -116,13 +120,16 @@ export class LivePipeline {
   async benchmark(runs: number) {
     const client = this.client
     const model = this.s.model
-    if (!client || !model || client.busy) throw new Error('detector is not ready')
-    client.busy = true
+    if (!client || !model || this.paused) throw new Error('detector is not ready')
+    // Live detection runs back to back, so the detector is rarely idle: stop sending live
+    // frames, let the one in flight finish, then hold the detector for the benchmark.
+    this.paused = true
     try {
+      await this.inflight
       const bmp = await createImageBitmap(this.video)
       return { model, ...(await client.bench(bmp, runs)) }
     } finally {
-      client.busy = false
+      this.paused = false
     }
   }
 
@@ -178,10 +185,10 @@ export class LivePipeline {
   private dispatchDetection(captureTime: number) {
     const client = this.client
     const model = this.s.model
-    if (!client || !model || client.busy) return
+    if (!client || !model || client.busy || this.paused) return
     const gen = this.generation
     client.busy = true
-    createImageBitmap(this.video)
+    this.inflight = createImageBitmap(this.video)
       .then((bmp) => client.detect(bmp))
       .then((r) => {
         if (gen !== this.generation) return
@@ -195,6 +202,7 @@ export class LivePipeline {
       })
       .finally(() => {
         client.busy = false
+        this.inflight = null
       })
   }
 
