@@ -1,0 +1,33 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #111;
+  color: #eee;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+nav button {
+  padding: 0.5rem 1rem;
+  border: 0;
+  background: #333;
+  color: inherit;
+}
+nav button[aria-selected='true'] {
+  background: #0a7;
+}
+video {
+  width: 100%;
+  max-height: 80vh;
+  background: #000;
+}
+section {
+  padding: 0.5rem 1rem;
+}
