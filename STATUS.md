@@ -1,25 +1,24 @@
 # CenpAI status
 
-**Updated:** 2026-10-26 · **Milestone:** M3 (reproducible model) · **Next:** owner datasets → OWLv2 drafts → review → `ml.dataset` v1 → YOLO11n baseline.
+**Updated:** 2026-11-16 · **Milestone:** v3 Phase 0 (repo reset) · **Next:** Phases 1, 2, and 3 in parallel.
 
-## Done
-- PRD revised to v2 (`docs/PRD.md`): YOLO fine-tune served as ONNX, OWLv2 for drafts and as a reference, classifiers rejected, unlicensed datasets allowed with AC07.
-- History restarted on an orphan `main`; the old history is on local branch `old-main`.
-- App (M2) kept: validation, ONNX detector, censoring, image and video pipelines, jobs and retention, Gradio UI, Docker, Render blueprint (not deployed).
-- `ml/`: `dataset.py` (checks, dedupe, scene-grouped split), `autolabel.py` (OWLv2), `train.py` (fine-tune, ONNX export, val threshold), `evaluate.py` (metrics through the serving code). Plus a Colab notebook.
-- Claude Code setup: `CLAUDE.md`, `.claude/agents`, `.claude/skills`, `.claude/hooks`.
+## Done (Phase 0)
+- v3 plan added as `docs/PLAN.md`; PRD scope updated (live camera, mobile web app, and speech are in; the Render upload site is out).
+- `docs/DECISIONS.md` records the v3 decisions, the lost raw data, notebook, weights and `old-main`, and the storage rule. `docs/datasets.md` lists the plate and profanity datasets (counts still to be measured).
+- `develop` integration branch, attribution turned off in `.claude/settings.json`, `CONTRIBUTING.md`, commit and branch rules in `CLAUDE.md`.
+- `web/` scaffolded (Vite, React, TypeScript, Vitest, Prettier): Camera tab shows the rear camera, Audio tab is a placeholder, one smoke test. CI has a `web` job beside the Python job.
+- `cenpai/`, `ml/`, and `tests/` untouched.
 
-## Tests
-`pytest` → 114 passed (2026-10-26; 97 app + 17 ml). The ml tests cover pure logic only.
+## Next
+1. Phase 1: plate detector v0 in Colab (`notebooks/train_detector_v0.ipynb`).
+2. Phase 2: live plate censoring in `web/src/camera/`.
+3. Phase 3: profanity classifier notebook (3a) and the Audio tab in `web/src/audio/` (3b).
+Phases 1, 2, and 3 run in parallel; see `docs/PLAN.md` section 4.
 
 ## Not yet verified
-- `ml.train`, `ml.autolabel`, and the CLIs of `ml.dataset` and `ml.evaluate` have not been run: ultralytics, torch, and transformers aren't installed on this machine. Their logic is unit-tested in `tests/test_ml.py`.
-- The Docker container has never been run locally; memory fit and CPU speed on Render are unmeasured (AC05).
-
-## Environment quirks
-- Low free RAM: run tests with `OPENBLAS_NUM_THREADS=1`; expect spurious `malloc failed` errors when memory runs out.
-- Windows PowerShell 5.1 writes UTF-8 with a byte-order mark (BOM). Don't use it to write config or text files.
+- The Camera tab on the demo phone (Samsung Galaxy S23+).
+- `ml.train`, `ml.autolabel`, and the CLIs of `ml.dataset` and `ml.evaluate` have never been run end to end.
 
 ## Blockers
-- No owner datasets yet, and no val/test source (both public sources are train-only).
-- AC07 licensing; paid compute or hosting needs approval.
+- Raw data, the paper's weights and notebook are lost; the plate dataset must be downloaded again (Phase 1).
+- AC07 dataset licensing is still open.
