@@ -44,6 +44,17 @@ The threshold is chosen on validation only: the highest confidence that keeps re
 
 Speed on the phone has not been measured yet (Phase 2).
 
+## Masking threshold (`mask_conf`)
+
+`conf` is the detection threshold: the highest confidence that keeps validation recall at 0.95 or more. `mask_conf` is a second, lower threshold for masking. It is the lowest confidence, not below 0.10, at which validation precision is still 0.90 or more. It was measured with section 11 of the notebook on the shipped yolov8n ONNX files, with the same matching rule as above. That run re-measured `conf` and got the same values (0.81 and 0.78) and the same test scores as the table above. The ONNX files did not change, so their `sha256` values are unchanged.
+
+| model | imgsz | conf | mask_conf | val P @ mask_conf | val R @ mask_conf | test P @ mask_conf | test R @ mask_conf |
+|---|---|---|---|---|---|---|---|
+| yolov8n onnx | 640 | 0.81 | 0.1 | 0.9801 | 0.9955 | 0.9781 | 0.9867 |
+| yolov8n onnx | 416 | 0.78 | 0.1 | 0.9845 | 0.9978 | 0.9825 | 0.9912 |
+
+At both sizes, validation precision is already above 0.90 at the 0.10 floor, so `mask_conf` sits at the floor.
+
 ## Choice for the app
 
 `web/public/models/plate-640/` and `plate-416/` hold the **yolov8n** files.
@@ -52,9 +63,9 @@ Speed on the phone has not been measured yet (Phase 2).
 - **Serving check.** Each folder was also loaded with `cenpai.detector.load_detector` and run on sample images from the dataset's test split. The yolo11n 640 file missed a plate on one sample image, scoring just under its threshold. The smoke model missed on more than one. yolov8n found a plate in every sample image at both sizes.
 - **Decision.** With validation tied at 640, the serving check decided it, so the app ships yolov8n. Test scores were not used to choose.
 
-| folder | file | sha256 | conf | version |
-|---|---|---|---|---|
-| `plate-640` | `plate_640.onnx` | `7190eb398899a34d09064a4c46522188cdd5fc9784862bfeef3f4bba49f8907c` | 0.81 | `v0-yolov8n-640` |
-| `plate-416` | `plate_416.onnx` | `41d576d4d7315068f87cda60d643d7a494b4c47f75c82614d6ad3b6d50191ce8` | 0.78 | `v0-yolov8n-416` |
+| folder | file | sha256 | conf | mask_conf | version |
+|---|---|---|---|---|---|
+| `plate-640` | `plate_640.onnx` | `7190eb398899a34d09064a4c46522188cdd5fc9784862bfeef3f4bba49f8907c` | 0.81 | 0.1 | `v0-yolov8n-640` |
+| `plate-416` | `plate_416.onnx` | `41d576d4d7315068f87cda60d643d7a494b4c47f75c82614d6ad3b6d50191ce8` | 0.78 | 0.1 | `v0-yolov8n-416` |
 
 The weights (`best.pt`), the other exports, and `results.csv` for each run are on the owner's Google Drive under `CenpAI/release/`. The Hugging Face upload in the notebook did not run (the secret was not readable at that step), so no Hub copy exists yet.
