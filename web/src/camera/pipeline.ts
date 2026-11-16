@@ -236,10 +236,12 @@ export class LivePipeline {
           model.meta.conf,
           this.keepTime(),
         )
-        this.s.debug =
-          `canvas ${this.canvas.width}x${this.canvas.height}, ` +
-          `detector frame ${r.frameW}x${r.frameH}, ${r.detections.length} raw boxes, ` +
-          `keep ${this.keepTime().toFixed(0)} ms, shutter after ${this.shutterTimeout().toFixed(0)} ms`
+        if (this.debug) {
+          this.s.debug =
+            `canvas ${this.canvas.width}x${this.canvas.height}, ` +
+            `detector frame ${r.frameW}x${r.frameH}, ${r.detections.length} raw boxes, ` +
+            `keep ${this.keepTime().toFixed(0)} ms, shutter after ${this.shutterTimeout().toFixed(0)} ms`
+        }
         this.haveResult = true
         this.lastResultAt = arrived
         this.s.inferMs = this.s.inferMs === null ? r.inferMs : 0.8 * this.s.inferMs + 0.2 * r.inferMs
