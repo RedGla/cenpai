@@ -5,6 +5,7 @@ import {
   countPlates,
   emptyTracker,
   iou,
+  keepTimeFor,
   maskRect,
   predictBox,
   updateTracker,
@@ -134,5 +135,30 @@ describe('counting', () => {
   it('stops counting after the keep time', () => {
     const s = updateTracker(emptyTracker(), [det(100, 100, 200, 140, 0.9)], 0, 0.8)
     expect(countPlates(s, 500)).toBe(0)
+  })
+})
+
+describe('slow detectors', () => {
+  it('keeps at least 400 ms, and 2.5 result intervals when results are slow', () => {
+    expect(keepTimeFor(30)).toBe(TRACK_TTL_MS)
+    expect(keepTimeFor(400)).toBe(1000)
+  })
+
+  it('a longer keep time keeps the box through a missed result', () => {
+    const s = updateTracker(emptyTracker(), [det(100, 100, 200, 140)], 0, 0.8)
+    expect(activeTracks(s, 800)).toHaveLength(0)
+    expect(activeTracks(s, 800, keepTimeFor(400))).toHaveLength(1)
+    expect(updateTracker(s, [], 800, 0.8, keepTimeFor(400)).tracks).toHaveLength(1)
+  })
+})
+
+describe('mask follows motion safely', () => {
+  it('covers both the last box and the predicted box', () => {
+    let s = updateTracker(emptyTracker(), [det(100, 100, 200, 140)], 0, 0.8)
+    s = updateTracker(s, [det(140, 100, 240, 140)], 100, 0.8)
+    const t = s.tracks[0]
+    const r = maskRect(t, 300, 1280, 720)
+    expect(r.x1).toBeLessThanOrEqual(140 - 10)
+    expect(r.x2).toBeGreaterThanOrEqual(Math.ceil(predictBox(t, 300).x2) + 10)
   })
 })

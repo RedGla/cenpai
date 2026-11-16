@@ -4,6 +4,7 @@ import {
   activeTracks,
   countPlates,
   emptyTracker,
+  keepTimeFor,
   maskRect,
   updateTracker,
   type TrackerState,
@@ -43,6 +44,8 @@ export class LivePipeline {
   private tracker: TrackerState = emptyTracker()
   private haveResult = false
   private lastResultAt = 0
+  /** Smoothed time between detection results (ms); stretches the timeouts on slow backends. */
+  private resultInterval = 0
   private callbackId = 0
   private stopped = false
   /** Live detection is paused (benchmark running). */
@@ -104,6 +107,7 @@ export class LivePipeline {
     const client = this.client
     this.tracker = emptyTracker()
     this.haveResult = false
+    this.resultInterval = 0
     this.s.loading = true
     this.s.model = null
     this.s.inferMs = null
@@ -149,7 +153,7 @@ export class LivePipeline {
         canvas.height = h
       }
       const now = performance.now()
-      const shutter = !this.haveResult || now - this.lastResultAt > SHUTTER_TIMEOUT_MS
+      const shutter = !this.haveResult || now - this.lastResultAt > this.shutterTimeout()
       this.s.shutter = shutter
       if (shutter) {
         this.drawShutter(ctx, w, h)
@@ -157,11 +161,12 @@ export class LivePipeline {
       } else {
         ctx.drawImage(video, 0, 0, w, h)
         ctx.fillStyle = '#000'
-        for (const t of activeTracks(this.tracker, now)) {
-          const r = maskRect(t, now, w, h)
+        const keep = this.keepTime()
+        for (const t of activeTracks(this.tracker, now, keep)) {
+          const r = maskRect(t, now, w, h, keep)
           ctx.fillRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1)
         }
-        this.s.plates = countPlates(this.tracker, now)
+        this.s.plates = countPlates(this.tracker, now, keep)
         if (this.debug) this.drawDebug(ctx, now)
       }
       this.dispatchDetection(now)
@@ -170,11 +175,21 @@ export class LivePipeline {
     this.callbackId = video.requestVideoFrameCallback!(this.onFrame)
   }
 
+  /** Keep time for unseen boxes: 400 ms, longer when the detector is slower than that. */
+  private keepTime(): number {
+    return keepTimeFor(this.resultInterval)
+  }
+
+  /** Shutter closes after 300 ms without a result, or 1.5 result intervals on a slow backend. */
+  private shutterTimeout(): number {
+    return Math.max(SHUTTER_TIMEOUT_MS, 1.5 * this.resultInterval)
+  }
+
   /** Debug only: outline each tracked box with its score (drawn on top of the masks). */
   private drawDebug(ctx: CanvasRenderingContext2D, now: number) {
     ctx.lineWidth = 4
     ctx.font = 'bold 28px sans-serif'
-    for (const t of activeTracks(this.tracker, now)) {
+    for (const t of activeTracks(this.tracker, now, this.keepTime())) {
       ctx.strokeStyle = t.confirmed ? '#0f0' : '#ff0'
       ctx.strokeRect(t.box.x1, t.box.y1, t.box.x2 - t.box.x1, t.box.y2 - t.box.y1)
       ctx.fillStyle = ctx.strokeStyle
@@ -209,12 +224,24 @@ export class LivePipeline {
       .then((bmp) => client.detect(bmp))
       .then((r) => {
         if (gen !== this.generation) return
-        this.tracker = updateTracker(this.tracker, r.detections, captureTime, model.meta.conf)
+        const arrived = performance.now()
+        if (this.haveResult) {
+          const gap = arrived - this.lastResultAt
+          this.resultInterval = this.resultInterval ? 0.8 * this.resultInterval + 0.2 * gap : gap
+        }
+        this.tracker = updateTracker(
+          this.tracker,
+          r.detections,
+          captureTime,
+          model.meta.conf,
+          this.keepTime(),
+        )
         this.s.debug =
           `canvas ${this.canvas.width}x${this.canvas.height}, ` +
-          `detector frame ${r.frameW}x${r.frameH}, ${r.detections.length} raw boxes`
+          `detector frame ${r.frameW}x${r.frameH}, ${r.detections.length} raw boxes, ` +
+          `keep ${this.keepTime().toFixed(0)} ms, shutter after ${this.shutterTimeout().toFixed(0)} ms`
         this.haveResult = true
-        this.lastResultAt = performance.now()
+        this.lastResultAt = arrived
         this.s.inferMs = this.s.inferMs === null ? r.inferMs : 0.8 * this.s.inferMs + 0.2 * r.inferMs
       })
       .catch((e: unknown) => {
