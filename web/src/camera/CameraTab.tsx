@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { BackendChoice, ModelSize } from '../detect/protocol'
+import { parseCensorMode, type CensorMode } from './censorStyle'
 import { LivePipeline, type LiveStats } from './pipeline'
 import { CanvasRecorder } from './record'
 import { median, percentile } from './stats'
@@ -47,6 +48,14 @@ export default function CameraTab() {
   const [stats, setStats] = useState<LiveStats | null>(null)
   const [size, setSize] = useState<ModelSize>(() => initialOptions().size)
   const [backend, setBackend] = useState<BackendChoice>(() => initialOptions().backend)
+  const [censorMode, setCensorMode] = useState<CensorMode>(() =>
+    parseCensorMode(new URLSearchParams(window.location.search).get('style')),
+  )
+  const censorModeRef = useRef(censorMode)
+  useEffect(() => {
+    censorModeRef.current = censorMode
+    if (pipelineRef.current) pipelineRef.current.censorMode = censorMode
+  }, [censorMode])
   const recorderRef = useRef(new CanvasRecorder())
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
@@ -177,6 +186,7 @@ export default function CameraTab() {
     const debug = new URLSearchParams(window.location.search).get('debug') === '1'
     const hold = new URLSearchParams(window.location.search).get('hold') !== '0'
     const pipeline = new LivePipeline(video, canvas, debug, hold)
+    pipeline.censorMode = censorModeRef.current
     pipelineRef.current = pipeline
     pipeline.start()
     const poll = window.setInterval(() => setStats({ ...pipeline.stats }), 250)
@@ -253,6 +263,17 @@ export default function CameraTab() {
         {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
       </div>
       <div className="controls">
+        <label>
+          Censor{' '}
+          <select
+            value={censorMode}
+            onChange={(e) => setCensorMode(parseCensorMode(e.target.value))}
+          >
+            <option value="solid">Solid (safest)</option>
+            <option value="blur">Blur</option>
+            <option value="pixelate">Pixelate</option>
+          </select>
+        </label>
         <label>
           Backend{' '}
           <select value={backend} onChange={(e) => setBackend(e.target.value as BackendChoice)}>

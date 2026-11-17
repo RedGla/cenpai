@@ -1,5 +1,6 @@
 import { DetectorClient, type ReadyInfo } from '../detect/client'
 import type { BackendChoice, ModelSize } from '../detect/protocol'
+import { paintCensor, type CensorMode } from './censorStyle'
 import { HoldQueue, MAX_HELD } from './holdQueue'
 import {
   activeTracks,
@@ -87,6 +88,10 @@ export class LivePipeline {
     /** Step 10: hold frames until detected. Off with ?hold=0. */
     private hold = true,
   ) {}
+
+  /** How each plate is covered: solid (default, safest), blur or pixelate. */
+  censorMode: CensorMode = 'solid'
+  private censorScratch = document.createElement('canvas')
 
   get stats(): LiveStats {
     return this.s
@@ -218,11 +223,10 @@ export class LivePipeline {
       return
     }
     ctx.drawImage(src, 0, 0, w, h)
-    ctx.fillStyle = '#000'
     const keep = this.keepTime()
     for (const tr of activeTracks(this.tracker, t, keep)) {
       const r = maskRect(tr, t, w, h, keep)
-      ctx.fillRect(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1)
+      paintCensor(ctx, src, r, this.censorMode, this.censorScratch, w, h)
     }
     this.s.plates = countPlates(this.tracker, t, keep)
     if (this.debug) this.drawDebug(ctx, t)
