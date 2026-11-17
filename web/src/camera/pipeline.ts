@@ -185,7 +185,7 @@ export class LivePipeline {
         frame.getContext('2d')!.drawImage(video, 0, 0, w, h)
         const held = this.queue.push(frame, now)
         this.dispatchDetection(now, frame, held.seq)
-        const r = this.queue.take()
+        const r = this.queue.take(now)
         for (const f of r.recycle) this.recycleCanvas(f.item)
         if (r.show) {
           this.drawFrame(ctx, r.show.item, r.show.t, w, h, r.blurred)

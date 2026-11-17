@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HoldQueue, MAX_HELD } from './holdQueue'
+import { HoldQueue, MAX_HELD, MAX_HOLD_MS } from './holdQueue'
 
 const seqs = (h: { seq: number }[]) => h.map((x) => x.seq)
 
@@ -36,7 +36,7 @@ describe('HoldQueue', () => {
     expect(q.take().show?.seq).toBe(4)
   })
 
-  it('releases the oldest frame blurred once more than 6 are held without a detection', () => {
+  it('releases the oldest frame blurred once more than the hard cap are held', () => {
     const q = new HoldQueue<number>()
     for (let i = 0; i < MAX_HELD; i++) q.push(i, i)
     expect(q.take().show).toBeNull()
@@ -78,5 +78,26 @@ describe('HoldQueue', () => {
     q.resetDetections()
     q.push(1, 33)
     expect(q.take().show).toBeNull()
+  })
+
+  it('releases blurred by age: a frame waits at most 300 ms for a detection', () => {
+    const q = new HoldQueue<number>()
+    // 30 fps: 9 frames fit inside 300 ms, so none is released before that
+    for (let i = 0; i < 9; i++) {
+      q.push(i, i * 33)
+      expect(q.take(i * 33).show).toBeNull()
+    }
+    q.push(9, 9 * 33)
+    const r = q.take(MAX_HOLD_MS + 1)
+    expect(r.show?.seq).toBe(0)
+    expect(r.blurred).toBe(true)
+  })
+
+  it('skips to the newest too-old frame when several are past the age limit', () => {
+    const q = new HoldQueue<number>()
+    for (let i = 0; i < 5; i++) q.push(i, i * 100)
+    const r = q.take(700) // frames 0..3 are older than 300 ms
+    expect(r.show?.seq).toBe(3)
+    expect(r.recycle.map((h) => h.seq)).toEqual([0, 1, 2])
   })
 })

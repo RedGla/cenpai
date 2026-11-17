@@ -22,8 +22,15 @@ export interface Release<T> {
   recycle: Held<T>[]
 }
 
-/** Release frames blurred once more than this many are held. */
-export const MAX_HELD = 6
+/**
+ * Release frames blurred once the oldest held frame is this old (ms) without a detection.
+ * Time-based rather than the brief's 6 frames: a 30 fps webcam reaches 6 frames at 200 ms,
+ * which is about one detection on the laptop, so a frame cap kept the shutter closed.
+ * At 20 fps 300 ms is the same 6 frames as before.
+ */
+export const MAX_HOLD_MS = 300
+/** Hard cap on held frames (memory guard), whatever their age. */
+export const MAX_HELD = 15
 /** Released frames waiting to be shown are capped here; older ones are skipped to cut delay. */
 export const MAX_RELEASABLE = 2
 
@@ -36,6 +43,7 @@ export class HoldQueue<T> {
   constructor(
     private maxHeld = MAX_HELD,
     private maxReleasable = MAX_RELEASABLE,
+    private maxHoldMs = MAX_HOLD_MS,
   ) {}
 
   get length(): number {
@@ -62,8 +70,8 @@ export class HoldQueue<T> {
     this.detected = -1
   }
 
-  /** Called once per display tick. */
-  take(): Release<T> {
+  /** Called once per display tick; `now` (ms) enables the age limit. */
+  take(now?: number): Release<T> {
     const recycle: Held<T>[] = []
     // Releasable frames: detection exists for them or a later frame. Skip all but the newest
     // few so the delay does not build up.
@@ -76,10 +84,12 @@ export class HoldQueue<T> {
     if (releasable > 0) {
       return { show: this.queue.shift()!, blurred: false, recycle }
     }
-    // Nothing detected yet for the oldest frame. If too many are held, let the oldest go,
-    // blurred, so the view never freezes for long.
-    if (this.queue.length > this.maxHeld) {
+    // Nothing detected yet for the oldest frame. If it has waited too long (or too many are
+    // held), let it go, blurred, so the view never freezes for long.
+    const tooOld = (h: Held<T>) => now !== undefined && now - h.t > this.maxHoldMs
+    if (this.queue.length > this.maxHeld || (this.queue.length > 0 && tooOld(this.queue[0]))) {
       while (this.queue.length > this.maxHeld + 1) recycle.push(this.queue.shift()!)
+      while (this.queue.length > 1 && tooOld(this.queue[1])) recycle.push(this.queue.shift()!)
       return { show: this.queue.shift()!, blurred: true, recycle }
     }
     return { show: null, blurred: false, recycle }
