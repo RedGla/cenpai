@@ -7,7 +7,7 @@ Reference setup: Chrome on the Samsung Galaxy S23+ (the demo phone), Firefox on 
 ## Before the day (once, online)
 
 1. Update Chrome on the phone and Firefox on the laptop.
-2. On the phone, open the deployed HTTPS address in Chrome. Allow the camera.
+2. On the phone, open https://cenpai.vercel.app in Chrome. Allow the camera.
 3. Install it: Chrome menu, then **Add to home screen** (or **Install app**). The app opens full screen from the home-screen icon.
 4. Open the app once and wait until the status line shows an inference time. The service worker downloads the app, the `onnxruntime-web` files and **both** plate models (640 and 416) the first time the app is opened. Then set **Input** to 416 and wait for a result, so the fallback model has also run once.
 5. Turn on airplane mode, close the app, open it from the home screen, and check that plates are covered. If anything fails to load, turn airplane mode off, open the app once more and repeat.
