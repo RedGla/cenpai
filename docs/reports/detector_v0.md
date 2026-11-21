@@ -68,4 +68,4 @@ At both sizes, validation precision is already above 0.90 at the 0.10 floor, so 
 | `plate-640` | `plate_640.onnx` | `7190eb398899a34d09064a4c46522188cdd5fc9784862bfeef3f4bba49f8907c` | 0.81 | 0.1 | `v0-yolov8n-640` |
 | `plate-416` | `plate_416.onnx` | `41d576d4d7315068f87cda60d643d7a494b4c47f75c82614d6ad3b6d50191ce8` | 0.78 | 0.1 | `v0-yolov8n-416` |
 
-The weights (`best.pt`), the other exports, and `results.csv` for each run are on the owner's Google Drive under `CenpAI/release/`. The Hugging Face upload in the notebook did not run (the secret was not readable at that step), so no Hub copy exists yet.
+The weights (`best.pt`), the other exports, and `results.csv` for each run are on the owner's Google Drive under `CenpAI/release/`. They are not uploaded to Hugging Face (decision 30 in `docs/DECISIONS.md`).

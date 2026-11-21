@@ -4,7 +4,7 @@
 
 ## Done (Phases 0-1)
 - v3 plan in `docs/PLAN.md` (Chrome on the phone, Firefox on the laptop). `develop` is the integration branch; attribution off.
-- Plate detector **yolov8n v0** in `web/public/models/plate-640/` and `plate-416/`, with `conf` 0.81 / 0.78 and `mask_conf` 0.10 / 0.10 from validation (decision 24). Report: `docs/reports/detector_v0.md`. Weights on Drive only.
+- Plate detector **yolov8n v0** in `web/public/models/plate-640/` and `plate-416/`, with `conf` 0.81 / 0.78 and `mask_conf` 0.10 / 0.10 from validation (decision 24). Weights stay on Google Drive (`CenpAI/release/`), not Hugging Face (decision 30). Report: `docs/reports/detector_v0.md`. Weights on Drive only.
 
 ## Done (Phase 2, PRs #3 and #6 merged)
 - Camera view (the only view; the Audio tab was removed in Phase 4): rear camera to canvas, detector in a Web Worker (`onnxruntime-web` 1.31.1), tracker, opaque masks, privacy shutter, recording (MP4 in Chrome), photo, Web Share, status line, 50-run Benchmark.
