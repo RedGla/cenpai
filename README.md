@@ -48,6 +48,10 @@ Or run `notebooks/train_colab.ipynb` on a Colab GPU. Raw data stays outside Git.
 
 `render.yaml` defines one Docker web service on Render's free plan, prepared but **not deployed**. It needs a verified model in `models/` and a benchmark of the hosting instance first. To roll back, redeploy the previous commit, since the model files are versioned with the code.
 
+### Phone app (`web/`)
+
+`web/vercel.json` deploys the phone app to Vercel as a static site: import the repository, set the project's Root Directory to `web`, and Vercel runs `npm ci` and `npm run build` and serves `dist/`. Every response carries `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`, so WebAssembly can use threads (`crossOriginIsolated` is `true`). Both plate models ship inside the app (12.7 MB and 12.8 MB; the largest file is the `onnxruntime-web` WebAssembly binary at 28.7 MB, and the whole build output was 54.6 MB on 2026-11-21). Vercel's documented limit for the Hobby plan is 100 MB of source files per deployment, with no smaller per-file limit listed, so every file fits. The service worker (`web/sw-template.js`, filled in at build time by `web/swPlugin.ts`) caches the app, the `onnxruntime-web` files and both models at install, so after one online load the installed app works in airplane mode. Phone setup and the demo script: `docs/DEMO.md`.
+
 ## License
 
 AGPL-3.0 (see `LICENSE`). Ultralytics YOLO is AGPL-3.0, so anyone using the hosted service can get its source.
