@@ -2,6 +2,10 @@
 
 Automatic license plate censoring for images and videos. ARC Inc. · Version 2.0 · 26 October 2026 (revises v1.0 of the same date).
 
+## v3 scope change (2026-11-16, revised 2026-11-21)
+
+Live camera and the mobile web app are in scope. The Render-hosted upload site is out. Speech and profanity censoring were added on 2026-11-16 and dropped on 2026-11-21: the project covers license plates only, and sound is never censored. Details are in `docs/PLAN.md`. The sections below are the v2 text and are unchanged; where they conflict with this section (for example the exclusion of live camera feeds and mobile apps in §2), this section wins.
+
 ## 0 What changed from v1.0
 
 | Area | v1.0 | v2.0 |

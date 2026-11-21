@@ -1,0 +1,85 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #111;
+  color: #eee;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+video {
+  width: 100%;
+  max-height: 80vh;
+  background: #000;
+}
+section {
+  padding: 0.5rem 1rem;
+}
+.video-source {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+canvas.view {
+  width: 100%;
+  max-height: 80vh;
+  background: #000;
+  object-fit: contain;
+}
+.status {
+  margin: 0.25rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.status-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0;
+  font-variant-numeric: tabular-nums;
+}
+.pill {
+  padding: 0 0.6rem;
+  border-radius: 1rem;
+  background: #a33;
+}
+.pill.on {
+  background: #0a7;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0;
+}
+.controls button,
+.controls select {
+  min-height: 2.5rem;
+  font-size: 1rem;
+}
+.saved video,
+.saved img {
+  width: 100%;
+  max-height: 50vh;
+  background: #000;
+}
+.controls a,
+.controls button {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: #333;
+  color: inherit;
+  text-decoration: none;
+}
+.controls button:disabled {
+  opacity: 0.5;
+}
