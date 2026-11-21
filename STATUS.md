@@ -1,6 +1,6 @@
 # CenpAI status
 
-**Updated:** 2026-11-21 · **Milestone:** v3 Phase 4 (hosting, install, offline) on `chore/demo-hardening`, deployed to https://cenpai.vercel.app (Vercel production, CLI deploy from `web/`) · **Scope:** license plates only; speech and profanity censoring dropped 2026-11-21 (decision 29), Phase 3 dropped · **Next:** deploy, check install and airplane mode on the phone, then Phase 5.
+**Updated:** 2026-11-21 · **Milestone:** v3 Phase 4 (hosting, install, offline) on `chore/demo-hardening`, deployed to https://cenpai.vercel.app (Vercel production, CLI deploy from `web/`) · **Scope:** license plates only; speech and profanity censoring dropped 2026-11-21 (decision 29), Phase 3 dropped · **Next:** on the phone, check install, `isolated: yes` and airplane mode, fill `docs/reports/phone_benchmark.md`, then Phase 5.
 
 ## Done (Phases 0-1)
 - v3 plan in `docs/PLAN.md` (Chrome on the phone, Firefox on the laptop). `develop` is the integration branch; attribution off.
