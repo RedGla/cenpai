@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BackendChoice } from '../detect/protocol'
+import type { BackendChoice, ModelSize } from '../detect/protocol'
+import { parseCensorMode, type CensorMode } from './censorStyle'
 import { LivePipeline, type LiveStats } from './pipeline'
 import { CanvasRecorder } from './record'
 import { median, percentile } from './stats'
@@ -26,14 +27,35 @@ export const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   audio: false,
 }
 
+/** Optional start-up choice from the address, e.g. ?size=416&backend=wasm. */
+export function initialOptions(search = window.location.search): {
+  size: ModelSize
+  backend: BackendChoice
+} {
+  const q = new URLSearchParams(search)
+  const s = q.get('size')
+  const size: ModelSize = s === '416' ? 416 : s === '640' ? 640 : 'auto'
+  const b = q.get('backend')
+  const backend: BackendChoice = b === 'webgpu' || b === 'wasm' ? b : 'auto'
+  return { size, backend }
+}
+
 export default function CameraTab() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pipelineRef = useRef<LivePipeline | null>(null)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [stats, setStats] = useState<LiveStats | null>(null)
-  const [size, setSize] = useState<640 | 416>(640)
-  const [backend, setBackend] = useState<BackendChoice>('auto')
+  const [size, setSize] = useState<ModelSize>(() => initialOptions().size)
+  const [backend, setBackend] = useState<BackendChoice>(() => initialOptions().backend)
+  const [censorMode, setCensorMode] = useState<CensorMode>(() =>
+    parseCensorMode(new URLSearchParams(window.location.search).get('style')),
+  )
+  const censorModeRef = useRef(censorMode)
+  useEffect(() => {
+    censorModeRef.current = censorMode
+    if (pipelineRef.current) pipelineRef.current.censorMode = censorMode
+  }, [censorMode])
   const recorderRef = useRef(new CanvasRecorder())
   const [recording, setRecording] = useState(false)
   const [seconds, setSeconds] = useState(0)
@@ -161,7 +183,10 @@ export default function CameraTab() {
     }
     let cancelled = false
     let stream: MediaStream | undefined
-    const pipeline = new LivePipeline(video, canvas)
+    const debug = new URLSearchParams(window.location.search).get('debug') === '1'
+    const hold = new URLSearchParams(window.location.search).get('hold') !== '0'
+    const pipeline = new LivePipeline(video, canvas, debug, hold)
+    pipeline.censorMode = censorModeRef.current
     pipelineRef.current = pipeline
     pipeline.start()
     const poll = window.setInterval(() => setStats({ ...pipeline.stats }), 250)
@@ -223,12 +248,32 @@ export default function CameraTab() {
           {stats?.loading
             ? 'Loading model'
             : model
-              ? `Backend: ${model.backend}, ${model.size} px`
+              ? `Backend: ${model.backend}, ${model.size} px, ` +
+                `isolated: ${model.isolated ? 'yes' : 'no'}, ` +
+                `threads: ${model.threads}` +
+                (model.skipped.length ? ` (skipped ${model.skipped.join('; ')})` : '')
               : 'No model'}
         </span>
         {model?.interimMask && <span data-testid="interim">interim mask threshold</span>}
+        {stats && stats.held > 0 && (
+          <span data-testid="hold">
+            Holding {stats.held} frames ({stats.holdMs.toFixed(0)} ms behind)
+          </span>
+        )}
+        {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
       </div>
       <div className="controls">
+        <label>
+          Censor{' '}
+          <select
+            value={censorMode}
+            onChange={(e) => setCensorMode(parseCensorMode(e.target.value))}
+          >
+            <option value="solid">Solid (safest)</option>
+            <option value="blur">Blur</option>
+            <option value="pixelate">Pixelate</option>
+          </select>
+        </label>
         <label>
           Backend{' '}
           <select value={backend} onChange={(e) => setBackend(e.target.value as BackendChoice)}>
@@ -239,7 +284,13 @@ export default function CameraTab() {
         </label>
         <label>
           Input{' '}
-          <select value={size} onChange={(e) => setSize(Number(e.target.value) as 640 | 416)}>
+          <select
+            value={size}
+            onChange={(e) =>
+              setSize(e.target.value === 'auto' ? 'auto' : (Number(e.target.value) as 640 | 416))
+            }
+          >
+            <option value="auto">Auto (640 on WebGPU, 416 on WebAssembly)</option>
             <option value={640}>640</option>
             <option value={416}>416</option>
           </select>

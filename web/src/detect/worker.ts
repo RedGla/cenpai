@@ -2,17 +2,18 @@
 // Detector worker: loads the model, checks its SHA-256 against MODEL.json, and runs one
 // inference at a time. Frames arrive as ImageBitmaps and are always closed after use.
 import * as ort from 'onnxruntime-web/webgpu'
-import { PAD_VALUE, letterboxParams, rgbaToTensor } from './letterbox'
+// The runtime's loader script and binary are served by the app itself (no CDN). Importing
+// them with ?url from the package keeps the loader a real module file: WebAssembly threads
+// start their own workers from it, and the Vite dev server will not import files in public/.
+import ortMjsUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url'
+import ortWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url'
+import { PAD_VALUE, letterboxToTensor } from './letterbox'
 import { postprocess } from './postprocess'
 import type { BackendUsed, FromWorker, ToWorker } from './protocol'
 import type { Detection, ModelMeta } from './types'
 
 const base = import.meta.env.BASE_URL
-const ortBase = `${base}ort/`
-ort.env.wasm.wasmPaths = {
-  mjs: `${ortBase}ort-wasm-simd-threaded.asyncify.mjs`,
-  wasm: `${ortBase}ort-wasm-simd-threaded.asyncify.wasm`,
-}
+ort.env.wasm.wasmPaths = { mjs: ortMjsUrl, wasm: ortWasmUrl }
 ort.env.logLevel = 'error'
 
 const send = (msg: FromWorker) => self.postMessage(msg)
@@ -22,6 +23,8 @@ let meta: ModelMeta | null = null
 let size = 640
 let maskConf = 0.25
 let inputName = 'images'
+/** Full-size copy of the frame, read back as raw pixels (no browser scaling). */
+let frameCanvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
 let tensorBuf: Float32Array | null = null
 
@@ -44,8 +47,19 @@ async function loadModel(dir: string): Promise<{ meta: ModelMeta; bytes: Uint8Ar
   return { meta: m, bytes: new Uint8Array(buf) }
 }
 
+/** Feature check, not a browser check: WebGPU counts only if an adapter is really there. */
+async function hasWebGPU(): Promise<boolean> {
+  const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu
+  if (!gpu) return false
+  try {
+    return (await gpu.requestAdapter()) != null
+  } catch {
+    return false
+  }
+}
+
 async function createSession(bytes: Uint8Array, backend: BackendUsed): Promise<ort.InferenceSession> {
-  if (backend === 'webgpu' && !('gpu' in navigator)) throw new Error('WebGPU is not available')
+  if (backend === 'webgpu' && !(await hasWebGPU())) throw new Error('WebGPU is not available')
   return ort.InferenceSession.create(bytes, {
     executionProviders: [backend],
     graphOptimizationLevel: 'all',
@@ -65,37 +79,38 @@ async function runRaw(input: Float32Array): Promise<{ data: Float32Array; n: num
   return { data, n: dims[2] }
 }
 
+/** One start attempt; the client runs each attempt in a fresh worker. */
 async function init(msg: Extract<ToWorker, { type: 'init' }>) {
+  session = null
+  // Must be set before the first session: the WebAssembly runtime starts its threads then.
+  ort.env.wasm.numThreads = msg.threads
   try {
-    session = null
-    const dir = `${base}models/plate-${msg.size}/`
-    const loaded = await loadModel(dir)
-    if (loaded.meta.imgsz !== msg.size) throw new Error('MODEL.json imgsz does not match the folder')
-    meta = loaded.meta
-    size = meta.imgsz
+    const model = await loadModel(`${base}models/plate-${msg.size}/`)
+    if (model.meta.imgsz !== msg.size) throw new Error('MODEL.json imgsz does not match the folder')
+    meta = model.meta
+    size = msg.size
     maskConf = meta.mask_conf ?? msg.maskConf
-    ctx = new OffscreenCanvas(size, size).getContext('2d', { willReadFrequently: true })
+    frameCanvas = new OffscreenCanvas(1, 1)
+    ctx = frameCanvas.getContext('2d', { willReadFrequently: true })
     tensorBuf = new Float32Array(3 * size * size)
-    const order: BackendUsed[] = msg.backend === 'auto' ? ['webgpu', 'wasm'] : [msg.backend]
-    let lastErr = ''
-    for (const backend of order) {
-      try {
-        const s = await createSession(loaded.bytes, backend)
-        session = s
-        inputName = s.inputNames[0]
-        // Warm-up: compiles shaders and proves the backend really runs before we rely on it.
-        const t0 = performance.now()
-        tensorBuf.fill(PAD_VALUE / 255)
-        await runRaw(tensorBuf)
-        send({ type: 'ready', backend, meta, size, warmupMs: performance.now() - t0 })
-        return
-      } catch (e) {
-        session = null
-        lastErr = `${backend}: ${e instanceof Error ? e.message : String(e)}`
-      }
-    }
-    throw new Error(lastErr)
+    const s = await createSession(model.bytes, msg.backend)
+    session = s
+    inputName = s.inputNames[0]
+    // Warm-up: compiles shaders and proves the backend really runs before we rely on it.
+    const t0 = performance.now()
+    tensorBuf.fill(PAD_VALUE / 255)
+    await runRaw(tensorBuf)
+    send({
+      type: 'ready',
+      backend: msg.backend,
+      meta,
+      size,
+      warmupMs: performance.now() - t0,
+      isolated: self.crossOriginIsolated === true,
+      threads: msg.threads,
+    })
   } catch (e) {
+    session = null
     send({ type: 'init-error', message: e instanceof Error ? e.message : String(e) })
   }
 }
@@ -103,23 +118,28 @@ async function init(msg: Extract<ToWorker, { type: 'init' }>) {
 /** Letterbox the frame, run the model, decode. Timings in ms. */
 async function pipeline(
   bitmap: ImageBitmap,
-): Promise<{ detections: Detection[]; inferMs: number; totalMs: number }> {
+): Promise<{
+  detections: Detection[]
+  inferMs: number
+  totalMs: number
+  frameW: number
+  frameH: number
+}> {
   const t0 = performance.now()
   const w = bitmap.width
   const h = bitmap.height
-  const lb = letterboxParams(w, h, size)
+  if (frameCanvas!.width !== w || frameCanvas!.height !== h) {
+    frameCanvas!.width = w
+    frameCanvas!.height = h
+  }
   const c = ctx!
-  c.fillStyle = `rgb(${PAD_VALUE},${PAD_VALUE},${PAD_VALUE})`
-  c.fillRect(0, 0, size, size)
-  c.imageSmoothingEnabled = true
-  c.imageSmoothingQuality = 'medium'
-  c.drawImage(bitmap, lb.padX, lb.padY, lb.newW, lb.newH)
-  rgbaToTensor(c.getImageData(0, 0, size, size).data, size, tensorBuf!)
+  c.drawImage(bitmap, 0, 0)
+  const { lb } = letterboxToTensor(c.getImageData(0, 0, w, h).data, w, h, size, tensorBuf!)
   const t1 = performance.now()
   const { data, n } = await runRaw(tensorBuf!)
   const t2 = performance.now()
   const detections = postprocess(data, n, lb, w, h, maskConf, meta!.iou)
-  return { detections, inferMs: t2 - t1, totalMs: performance.now() - t0 }
+  return { detections, inferMs: t2 - t1, totalMs: performance.now() - t0, frameW: w, frameH: h }
 }
 
 self.onmessage = async (ev: MessageEvent<ToWorker>) => {

@@ -12,7 +12,8 @@ This plan replaces the scope of `docs/PRD.md` v2, which excluded live camera fee
 | Topic | Choice | What it means for the build |
 |---|---|---|
 | Deadline | Tue Nov 17, the demo must run live | Phases 0-4 happen tonight. Everything else is after the demo. |
-| App form | Mobile web app that installs to the home screen (a PWA). Models run on the phone. | Camera needs HTTPS. Chrome on Android is the reference. Laptop Chrome is the fallback. |
+| App form | Mobile web app that installs to the home screen (a PWA). Models run on the phone. | Camera needs HTTPS. Chrome on the S23+ is the reference. Firefox on the Windows laptop is the fallback. |
+| Browser | Chrome on the phone, Firefox on the laptop (settled 2026-11-16) | Chrome for Android has WebGPU, so the phone can use its graphics chip. Firefox on Windows has WebGPU too. The app must work in both, so it detects features at run time. |
 | "Live" | Live camera preview with plates covered, plus censored recording and photo | No broadcasting to Facebook/YouTube/TikTok in scope. |
 | Audio | Speech-to-text, then a Tagalog profanity classifier you fine-tune | Whisper is used pretrained. Your trained model is the classifier. |
 | Training | You fine-tune your own models (ML course requirement) | Two fine-tuning studies: plate detectors and text classifiers. |
@@ -91,7 +92,7 @@ Tasks
 - Add the paper's plate dataset and the Tagalog profanity dataset to `docs/datasets.md` with source, license, and counts.
 - Record in `docs/DECISIONS.md` that the raw data, the original notebook and weights, and the `old-main` branch were lost. The hardcoded data path in `ml/datasets.yaml` is fixed in Phase 5, because Phase 0 leaves `ml/` untouched.
 - Set up the repo the same way as PSRR: a `develop` integration branch, commit and pull request attribution turned off in `.claude/settings.json`, a `CONTRIBUTING.md`, and commit rules in `CLAUDE.md`.
-- Set up phone debugging: USB debugging on the phone, then `chrome://inspect` on the laptop with port forwarding for the dev server port. The phone then opens `localhost`, which the browser treats as secure, so the camera works without certificates.
+- Set up phone debugging: turn on USB debugging in Android, run `adb reverse tcp:5173 tcp:5173` on the laptop (`adb` comes with Android platform-tools), run `npm run dev` in `web/`, then open `localhost:5173` in Chrome on the phone. To read the phone's console, open `edge://inspect` in Edge on the laptop; Firefox cannot inspect Chrome on a phone. The browser treats `localhost` as secure, so the camera works without certificates.
 
 Done when: a placeholder page from `web/` opens on the phone and shows the rear camera.
 
@@ -120,9 +121,9 @@ Done when: the Python `cenpai.detector` loads the exported file and finds plates
 Build in this order. Each step can be checked before the next. Start with the 3-epoch smoke model from Phase 1 and swap in the full model when it is ready.
 
 1. **Camera to canvas.** Rear camera at 1280x720. Draw each frame with `requestVideoFrameCallback`. Show an FPS counter.
-2. **Detector in a Web Worker.** `onnxruntime-web`, trying WebGPU (the phone's graphics chip) first and WebAssembly (CPU) second. Port letterbox, box decoding, and NMS (the step that removes duplicate boxes) from `cenpai/detector.py`. Add a test: same image in, same boxes out as Python within 1 px.
+2. **Detector in a Web Worker.** `onnxruntime-web`, using WebGPU (the graphics chip) where the browser has it and WebAssembly (CPU) otherwise. Chrome on the phone has WebGPU. Keep multi-threaded WebAssembly working as the fallback; it needs the cross-origin isolation headers from the dev server too. Port letterbox, box decoding, and NMS (the step that removes duplicate boxes) from `cenpai/detector.py`. Add a test: same image in, same boxes out as Python within 1 px.
 3. **Never queue detections.** One inference at a time; skip camera frames while busy.
-4. **Tracker and mask.** Match boxes between detections by overlap. Draw an opaque mask with 10% padding (minimum 4 px, per decision 8) in the same callback that draws the frame, so the canvas never shows an unmasked frame for a known plate. Keep a mask for 400 ms after the plate was last seen, growing the padding each frame. Mask at the validation-chosen threshold from `MODEL.json`; a separate, lower masking threshold is a Phase 5 experiment.
+4. **Tracker and mask.** Match boxes between detections by overlap. Draw an opaque mask with 10% padding (minimum 4 px, per decision 8) in the same callback that draws the frame, so the canvas never shows an unmasked frame for a known plate. Keep a mask for 400 ms after the plate was last seen, growing the padding each frame. Use two thresholds: mask at `mask_conf` (the lowest confidence, not below 0.10, that keeps validation precision at or above 0.90) and count plates at `conf`. Phase 1 showed why: `conf` came out at 0.81, which discards detections the model does make. Until `mask_conf` is measured, the app masks at 0.25 and says so on screen.
 5. **Privacy shutter.** Blur the whole frame until the first detection result arrives, and whenever no result has arrived for 300 ms.
 6. **Record.** `canvas.captureStream(30)` into `MediaRecorder`. Choose MP4 if `isTypeSupported` says so, else WebM. Video only by default tonight, because live audio is not censored yet.
 7. **Photo and share.** Save the censored frame. Offer the system share sheet through the Web Share API.
@@ -131,7 +132,7 @@ Build in this order. Each step can be checked before the next. Start with the 3-
 
 Done when, on the demo phone: preview holds near 30 fps with at least 15 detections per second (targets to measure, not promises), a printed plate at arm's length is covered within 2 frames of entering view, and a 10 s recording plays back censored from the gallery.
 
-Cut lines: if WebGPU fails, use WebAssembly with the 416 model. If recording fails, demo photo mode and use the phone's screen recorder.
+Cut lines: if WebGPU fails on the phone, use WebAssembly with the 416 model. If that is too slow, use a 320 export and detect on every second or third frame, relying on the tracker in between. If it is still too slow, demo in Firefox on the laptop, which has WebGPU. If recording fails, demo photo mode and use the phone's screen recorder.
 
 ---
 
@@ -163,8 +164,8 @@ Cut lines: if the classifier will not load in the browser, ship Strict mode and 
 - Add the web app manifest and a service worker that caches the app and the models. Install to the home screen. Load every model once on the demo phone tonight, then test in airplane mode.
 - Props, because a classroom has no cars: print four to six plate photos (your own cars or made-up plates), bring a toy car or a second phone showing street photos. Test under room lighting; screens can cause moire patterns that hurt detection.
 - Mirror the phone to the projector with scrcpy over USB.
-- Record a full successful run tonight as the backup video. Keep laptop Chrome ready as the second backup.
-- Numbers for the slides: milliseconds per inference and FPS on the phone for each backend, tonight's detection scores labelled as pilot numbers, and the classifier's test metrics if it was trained. Update Chrome on the S23+ before measuring. Nothing estimated.
+- Record a full successful run tonight as the backup video. Keep Firefox on the laptop ready as the second backup.
+- Numbers for the slides: milliseconds per inference and FPS on the phone for each backend, tonight's detection scores labelled as pilot numbers, and the classifier's test metrics if it was trained. Update Chrome on the S23+ and Firefox on the laptop before measuring. Nothing estimated.
 - Rehearse the script in section 6 twice.
 
 ---
@@ -199,7 +200,7 @@ Profanity classifier
 ### Phase 7. Live audio inside recordings (2-4 days; Opus, xhigh effort for the sync design, high for the rest)
 
 - Streaming transcription: voice-activity detection, a rolling window, words finalized after a short delay.
-- Keep sound and picture in sync without buffering video: encode video frames as they arrive, encode audio a few seconds later once bleeps are decided, and give both their original timestamps when writing the file (WebCodecs plus a muxer library).
+- Keep sound and picture in sync without buffering video: encode video frames as they arrive, encode audio a few seconds later once bleeps are decided, and give both their original timestamps when writing the file (WebCodecs plus a muxer library). Chrome on the phone and Firefox on the laptop both have WebCodecs; confirm the saved file plays in both.
 - Live censored captions during recording.
 - Stretch: fine-tune Whisper on Filipino speech with LoRA and score it on profanity-word recall. Optional: a keyword-spotting model as a comparison.
 
@@ -217,6 +218,7 @@ Profanity classifier
 | Area | Guidance |
 |---|---|
 | ONNX in the browser | Pin the `onnxruntime-web` version. Serve its `.wasm` files from the app so it works offline. Order the backends WebGPU then WebAssembly. A 16-bit export has been reported to break WebGPU; export 32-bit. |
+| Two browsers | Chrome on the phone, Firefox on the Windows laptop. Both have WebGPU and WebCodecs (checked 2026-11-16). Detect features at run time, never by browser name, and test in both. `MediaRecorder` in Firefox writes WebM; Chrome may also offer MP4. WebAssembly threads need the cross-origin isolation headers. |
 | YOLO26 | Its default export has no NMS and a different output shape. Make the post-processing branch on shape. Not needed tonight. |
 | Frames | If you hold frames (`VideoFrame` or `ImageBitmap`), close them when done or the phone runs out of memory. |
 | Recording format | Ask `MediaRecorder.isTypeSupported` at run time. Do not assume MP4. |
@@ -333,4 +335,7 @@ State the limits out loud: pilot detection scores on a split that may overlap, a
 - Ultralytics export options: https://docs.ultralytics.com/modes/export/
 - Public plate checkpoint: https://huggingface.co/morsetechlab/yolov11-license-plate-detection
 - ONNX Runtime Web with WebGPU: https://opensource.microsoft.com/blog/2024/02/29/onnx-runtime-web-unleashes-generative-ai-in-the-browser-using-webgpu/
+- WebGPU implementation status (Firefox for Android): https://github.com/gpuweb/gpuweb/wiki/Implementation-Status
+- WebCodecs in Firefox (Android still open): https://bugzilla.mozilla.org/show_bug.cgi?id=1746557 and https://caniuse.com/webcodecs
+- Firefox remote debugging: https://firefox-source-docs.mozilla.org/devtools-user/about_colon_debugging/
 - Browser YOLO export pitfalls (opset 12, 16-bit): https://pranta-barua007.github.io/yolo11-onnx/guide
