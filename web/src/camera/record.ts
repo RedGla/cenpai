@@ -22,7 +22,7 @@ export interface Recording {
 
 /**
  * Records the censored canvas. Video only: the stream comes from canvas.captureStream, which
- * has no audio track, because live audio is not censored yet.
+ * has no audio track: the app censors plates in video only.
  */
 export class CanvasRecorder {
   private recorder: MediaRecorder | null = null
