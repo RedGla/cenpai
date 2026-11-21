@@ -31,6 +31,7 @@
 | 26 | Frames are letterboxed in JavaScript the way `cv2.resize(INTER_LINEAR)` does, not with the browser's canvas scaling. | The canvas scaled smoother than OpenCV; on the same phone frame the 416 model scored 0.365 instead of 0.669. Golden test pins it within one level. |
 | 27 | The 400 ms keep time and 300 ms shutter timeout are floors; they stretch to 2.5 and 1.5 measured result intervals on a slow backend. Mask padding grows 4% of the longer side per 1/30 s since the detected frame. | Deviation from `docs/PLAN.md` step 4/5: with 200-400 ms per result the fixed values made masks and the shutter blink. |
 | 28 | Step 10 (detect-before-release) is on by default: hold frames until detected, at most 2 released frames queued, more than 6 held go out blurred. `?hold=0` turns it off. | Cut readable-plate frames in a recording from 22/174 (off) to 4/144 (on) on the phone, not a controlled pair. Adds about 120-140 ms of delay. |
+| 29 | Speech and profanity censoring dropped on 2026-11-21 to focus on plates. The Audio tab is removed, so the app has only the Camera view and loads no model from Hugging Face. | Owner decision 2026-11-21; replaces decision 20. Recordings are video only and sound is never censored (`docs/PLAN.md` §1). Any classifier notebook or report stays in the repo as history. |
 
 ## Open
 - AC07: licenses of the datasets in `docs/datasets.md`; final comparison set; owner datasets; Philippine test set; hosting tier; hypothesis test (with the instructor).
