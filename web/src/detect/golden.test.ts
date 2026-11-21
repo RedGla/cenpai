@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import golden from '../../tests/fixtures/golden.json'
-import { letterboxParams, roundHalfEven } from './letterbox'
+import { letterboxParams, letterboxToTensor, resizeLinearRGBA, roundHalfEven } from './letterbox'
 import { postprocess } from './postprocess'
 
 describe('golden: TypeScript port equals cenpai/detector.py', () => {
@@ -40,5 +40,42 @@ describe('golden: TypeScript port equals cenpai/detector.py', () => {
       total += got.length
     }
     expect(total).toBeGreaterThan(50)
+  })
+
+  const rgbToRgba = (rgb: number[]) => {
+    const n = rgb.length / 3
+    const out = new Uint8ClampedArray(n * 4)
+    for (let i = 0; i < n; i++) {
+      out[4 * i] = rgb[3 * i]
+      out[4 * i + 1] = rgb[3 * i + 1]
+      out[4 * i + 2] = rgb[3 * i + 2]
+      out[4 * i + 3] = 255
+    }
+    return out
+  }
+
+  it('resizes like cv2.resize INTER_LINEAR (within one level)', () => {
+    for (const c of golden.resize) {
+      const got = resizeLinearRGBA(rgbToRgba(c.src_rgb), c.w, c.h, c.dw, c.dh)
+      expect(got.length).toBe(c.dst_rgb.length)
+      let worst = 0
+      got.forEach((v, i) => (worst = Math.max(worst, Math.abs(v - c.dst_rgb[i]))))
+      expect(worst).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('builds the same letterboxed input as Python (within one level)', () => {
+    for (const c of golden.letterbox_pixels) {
+      const { tensor } = letterboxToTensor(rgbToRgba(c.src_rgb), c.w, c.h, c.size)
+      const plane = c.size * c.size
+      let worst = 0
+      for (let i = 0; i < plane; i++) {
+        for (let ch = 0; ch < 3; ch++) {
+          const v = Math.round(tensor[ch * plane + i] * 255)
+          worst = Math.max(worst, Math.abs(v - c.canvas_rgb[3 * i + ch]))
+        }
+      }
+      expect(worst).toBeLessThanOrEqual(1)
+    }
   })
 })
