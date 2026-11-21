@@ -14,7 +14,12 @@ Speed numbers for the demo slides, read from the app's **Benchmark** button on t
 
 | device | browser and version | backend | input size (px) | median (ms) | 95th percentile (ms) | threads | preview fps | date |
 |---|---|---|---|---|---|---|---|---|
-| Samsung Galaxy S23+ (phone) | Chrome | | | | | | | |
-| Windows laptop | Firefox | | | | | | | |
+| Samsung Galaxy S23+ (phone) | Chrome 157.0.8103.78 | WebGPU | 640 | 93.3 | 98.2 | 1 | 21-24 | 2026-11-21 |
+| Windows laptop | Firefox 160.0.1 | WebGPU | 640 | 90.9 | 94.5 | 1 | | 2026-11-21 |
+
+Notes on the 2026-11-21 runs (both on https://cenpai.vercel.app, cross-origin isolated, Backend and Input on Auto; the browsers were not updated first, so these are the versions installed):
+
+- **Phone:** measured in a Chrome tab on the deployed address, just before installing the app, with the camera pointed at the room (no plate in view). The whole-frame median (including resize and decode) was 140.0 ms. Preview fps is the range of five readings 2 s apart over 10 s.
+- **Laptop:** measured in Firefox 160.0.1 with a fresh profile driven over WebDriver BiDi. The laptop webcam opened but delivered no frames, so Firefox's built-in fake camera (`media.navigator.streams.fake`) fed the frames. The inference times are real; preview fps is left blank because it would only measure the fake camera. The whole-frame median was 100.6 ms.
 
 Earlier numbers measured during Phase 2 on the local dev server (not the deployed app) are in `STATUS.md`.
