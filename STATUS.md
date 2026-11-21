@@ -1,6 +1,6 @@
 # CenpAI status
 
-**Updated:** 2026-11-21 · **Milestone:** v3 Phase 4 (hosting, install, offline) on `chore/demo-hardening`, deployed to https://cenpai.vercel.app (Vercel production, CLI deploy from `web/`) · **Scope:** license plates only; speech and profanity censoring dropped 2026-11-21 (decision 29), Phase 3 dropped · **Next:** hold a plate in front of the installed app in airplane mode (the one Phase 4 check left), then Phase 5.
+**Updated:** 2026-11-21 · **Milestone:** v3 Phase 4 (hosting, install, offline) on `chore/demo-hardening`, deployed to https://cenpai.vercel.app (Vercel production, CLI deploy from `web/`) · **Scope:** license plates only; speech and profanity censoring dropped 2026-11-21 (decision 29), Phase 3 dropped · **Next:** merge PR #7, release `v0.3-demo`, then Phase 5.
 
 ## Done (Phases 0-1)
 - v3 plan in `docs/PLAN.md` (Chrome on the phone, Firefox on the laptop). `develop` is the integration branch; attribution off.
@@ -27,11 +27,11 @@
 ## Done (Phase 4, PR #7)
 - Audio tab removed (decision 29). Manifest, icons, service worker (precaches 15 files: app, `onnxruntime-web`, both models), Vercel config with COOP/COEP. Deployed to https://cenpai.vercel.app on 2026-11-21.
 - Checked on the S23+ over USB DevTools, 2026-11-21: `crossOriginIsolated` true; Chrome offers the full Install; the app is installed as a WebAPK and opens full screen; with the network cut for the installed app, a reload served all 10 requests from the service worker, stayed isolated, and ran detection on WebGPU 640 (17 fps, 188 ms per inference on that reading).
+- Airplane mode, 2026-11-22: with airplane mode on (read over adb: `airplane_mode_on` 1, `navigator.onLine` false), the installed app covered a made-up plate shown on the laptop screen in 3 polls in a row, 2 s apart: Shield on, Plates covered 1, 23-30 fps, 85-104 ms per inference, WebGPU 640, `isolated: yes`. Checked by eye on a phone screenshot: the plate was fully under the black mask. A printed plate has still not been tested.
 - Firefox 160.0.1 on the laptop: the deployed app loads isolated under the service worker and runs WebGPU 640. The laptop webcam opened but delivered no frames on 2026-11-21.
 - Benchmarks on the deployed app: `docs/reports/phone_benchmark.md`.
 
 ## Not yet verified
-- A plate covered by the installed app in real airplane mode. The offline check above cut the network through DevTools and had no plate in view.
 - A printed plate (only a plate image on a phone screen was used).
 - Recording fully censored: plates cut off at the frame edge, and plates the live detector misses, still leak with step 10 on (a result with no boxes still releases frames).
 - `ml.train`, `ml.autolabel`, and the CLIs of `ml.dataset` and `ml.evaluate` have never been run end to end.
