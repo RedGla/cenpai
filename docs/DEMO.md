@@ -11,7 +11,7 @@ Reference setup: Chrome on the Samsung Galaxy S23+ (the demo phone), Firefox on 
 3. Install it: Chrome menu, then **Add to home screen** (or **Install app**). The app opens full screen from the home-screen icon.
 4. Open the app once and wait until the status line shows an inference time. The service worker downloads the app, the `onnxruntime-web` files and **both** plate models (640 and 416) the first time the app is opened. Then set **Input** to 416 and wait for a result, so the fallback model has also run once.
 5. Turn on airplane mode, close the app, open it from the home screen, and check that plates are covered. If anything fails to load, turn airplane mode off, open the app once more and repeat.
-6. Optional check: on the laptop, open `chrome://inspect` with the phone connected over USB, inspect the CenpAI tab and run `crossOriginIsolated` in the console. It should print `true`.
+6. Check cross-origin isolation: the status line should say `isolated: yes`. To see it in the console, connect the phone over USB, open `chrome://inspect` in Chrome on the laptop, inspect the CenpAI tab and run `crossOriginIsolated`. It should print `true`.
 
 ## Props
 
