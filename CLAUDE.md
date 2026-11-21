@@ -19,7 +19,7 @@ Hooks: `.claude/settings.json` → `.claude/hooks/guard.py`
 ## Web app (`web/`, Vite + React + TypeScript)
 
 Run from `web/`: `npm ci`, then `npm run dev` (port 5173), `npm test`, `npm run typecheck`, `npm run build`, `npm run format`.
-Tabs live in their own folders: `web/src/camera/`, `web/src/audio/`. Phases edit only their own folder.
+The app has one view, Camera, in `web/src/camera/`. Phases edit only their own folder.
 
 ## Branches
 

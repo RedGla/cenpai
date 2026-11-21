@@ -314,7 +314,7 @@ export default function CameraTab() {
           (whole frame incl. resize and decode: median {bench.totalMedian.toFixed(1)} ms)
         </p>
       )}
-      <p className="status">Video only: live audio is not censored yet.</p>
+      <p className="status">Video only: recordings have no sound.</p>
       {notice && <p role="status">{notice}</p>}
       {saved && (
         <div className="saved" data-testid="saved">

@@ -1,15 +1,15 @@
 # CenpAI status
 
-**Updated:** 2026-11-17 · **Milestone:** v3 Phase 2 (live plate censoring) in review as PR #6 · **Next:** finish the Phase 2 phone checks, then Phase 3.
+**Updated:** 2026-11-21 · **Milestone:** v3 Phase 4 (hosting, install, offline) on `chore/demo-hardening`, deployed to https://cenpai.vercel.app (Vercel production, CLI deploy from `web/`) · **Scope:** license plates only; speech and profanity censoring dropped 2026-11-21 (decision 29), Phase 3 dropped · **Next:** merge PR #7, release `v0.3-demo`, then Phase 5.
 
 ## Done (Phases 0-1)
 - v3 plan in `docs/PLAN.md` (Chrome on the phone, Firefox on the laptop). `develop` is the integration branch; attribution off.
 - Plate detector **yolov8n v0** in `web/public/models/plate-640/` and `plate-416/`, with `conf` 0.81 / 0.78 and `mask_conf` 0.10 / 0.10 from validation (decision 24). Report: `docs/reports/detector_v0.md`. Weights on Drive only.
 
-## Done (Phase 2, PR #3 merged, follow-up PR #6 open)
-- Camera tab: rear camera to canvas, detector in a Web Worker (`onnxruntime-web` 1.31.1), tracker, opaque masks, privacy shutter, recording (MP4 in Chrome), photo, Web Share, status line, 50-run Benchmark.
+## Done (Phase 2, PRs #3 and #6 merged)
+- Camera view (the only view; the Audio tab was removed in Phase 4): rear camera to canvas, detector in a Web Worker (`onnxruntime-web` 1.31.1), tracker, opaque masks, privacy shutter, recording (MP4 in Chrome), photo, Web Share, status line, 50-run Benchmark.
 - Start-up tries WebGPU at 640, then threaded WebAssembly at 416 (15 s limit), then single-threaded 416, each in a fresh worker. Cross-origin isolation headers on the dev and preview servers.
-- Step 10: frames are held until a detection exists for them or a later frame; more than 6 held go out blurred. `?hold=0` turns it off; `?debug=1` outlines boxes; `?size=` and `?backend=` force a model.
+- Step 10: frames are held until a detection exists for them or a later frame; frames held longer than 300 ms go out blurred. Censor style: solid (default), blur or pixelate. `?hold=0` turns it off; `?debug=1` outlines boxes; `?size=` and `?backend=` force a model.
 - Checks 2026-11-17: `npm run typecheck`, `npm test` (49 passed, 9 files) and `npm run build` pass.
 - Measured on the S23+ (read off its screen over USB), 2026-11-16/17:
   - Chrome 157, WebGPU 640: Benchmark median 108.1 ms, p95 111.5 ms (whole frame median 158.4 ms).
@@ -23,6 +23,13 @@
   - Dark room, 120 frames: 2 uncovered frames on entry, then readable again for 7 frames while the detector lost it.
   - Lights on, plate held still in view, 133 frames: 0 readable (125 masked, 8 shutter-blurred).
   - Lights on, entry take, 140 frames: covered within about 1 frame once fully in view; 1 single-frame miss; about 17 frames of a plate cut off at the frame edge were never masked.
+
+## Done (Phase 4, PR #7)
+- Audio tab removed (decision 29). Manifest, icons, service worker (precaches 15 files: app, `onnxruntime-web`, both models), Vercel config with COOP/COEP. Deployed to https://cenpai.vercel.app on 2026-11-21.
+- Checked on the S23+ over USB DevTools, 2026-11-21: `crossOriginIsolated` true; Chrome offers the full Install; the app is installed as a WebAPK and opens full screen; with the network cut for the installed app, a reload served all 10 requests from the service worker, stayed isolated, and ran detection on WebGPU 640 (17 fps, 188 ms per inference on that reading).
+- Airplane mode, 2026-11-22: with airplane mode on (read over adb: `airplane_mode_on` 1, `navigator.onLine` false), the installed app covered a made-up plate shown on the laptop screen in 3 polls in a row, 2 s apart: Shield on, Plates covered 1, 23-30 fps, 85-104 ms per inference, WebGPU 640, `isolated: yes`. Checked by eye on a phone screenshot: the plate was fully under the black mask. A printed plate has still not been tested.
+- Firefox 160.0.1 on the laptop: the deployed app loads isolated under the service worker and runs WebGPU 640. The laptop webcam opened but delivered no frames on 2026-11-21.
+- Benchmarks on the deployed app: `docs/reports/phone_benchmark.md`.
 
 ## Not yet verified
 - A printed plate (only a plate image on a phone screen was used).

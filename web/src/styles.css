@@ -14,15 +14,6 @@ h1 {
   font-size: 1.1rem;
   margin: 0;
 }
-nav button {
-  padding: 0.5rem 1rem;
-  border: 0;
-  background: #333;
-  color: inherit;
-}
-nav button[aria-selected='true'] {
-  background: #0a7;
-}
 video {
   width: 100%;
   max-height: 80vh;
