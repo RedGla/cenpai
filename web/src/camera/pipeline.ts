@@ -6,6 +6,7 @@ import {
   activeTracks,
   countPlates,
   emptyTracker,
+  keepConfFor,
   keepTimeFor,
   maskRect,
   updateTracker,
@@ -248,7 +249,7 @@ export class LivePipeline {
     this.s.plates = countPlates(this.tracker, t, keep)
     if (this.debug) {
       this.drawDebug(ctx, t)
-      const rows = this.monitor.frame(t, this.tracker.tracks, drawn)
+      const rows = this.monitor.frame(t, this.tracker.tracks, drawn, keep)
       this.s.trackRows = rows.map(formatRow)
       this.s.stability = formatSummary(this.monitor.summary()) + `, canvas resizes ${this.resizes}`
     }
@@ -351,6 +352,7 @@ export class LivePipeline {
           captureTime,
           model.meta.conf,
           this.keepTime(),
+          { startConf: model.maskConf, keepConf: keepConfFor(model.maskConf) },
         )
         if (this.debug) {
           this.s.debug =

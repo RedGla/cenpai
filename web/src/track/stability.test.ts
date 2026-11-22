@@ -11,6 +11,11 @@ const track = (id: number, x: number, lastSeen: number, missed = 0): Track => ({
   score: 0.5,
   confirmed: false,
   missed,
+  hits: 1,
+  born: lastSeen,
+  smooth: { x1: x, y1: 100, x2: x + 100, y2: 140 },
+  padCarry: 0,
+  gap: 0,
 })
 
 describe('StabilityMonitor', () => {

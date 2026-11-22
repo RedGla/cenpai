@@ -3,7 +3,7 @@
  * Numbers only: no plate text, frames or crops are kept. Box coordinates are held in memory
  * for at most REACQUIRE_MS so a new track can be compared with a recently dropped one.
  */
-import { iou, type Box, type Track } from './tracker'
+import { TRACK_TTL_MS, iou, isHolding, type Box, type Track } from './tracker'
 
 /** A new track this soon after a drop, on an overlapping box, counts as a re-acquisition. */
 export const REACQUIRE_MS = 1000
@@ -103,7 +103,12 @@ export class StabilityMonitor {
    * One displayed frame. `tracks` is every track the tracker holds; `drawn` the masks painted.
    * Returns the per-track rows for the overlay.
    */
-  frame(now: number, tracks: readonly Track[], drawn: readonly DrawnMask[]): TrackRow[] {
+  frame(
+    now: number,
+    tracks: readonly Track[],
+    drawn: readonly DrawnMask[],
+    keepMs = TRACK_TTL_MS,
+  ): TrackRow[] {
     this.lastT = now
     this.frames += 1
     this.recentDrops = this.recentDrops.filter((d) => now - d.t <= REACQUIRE_MS)
@@ -164,7 +169,7 @@ export class StabilityMonitor {
         framesUnseen: k.framesUnseen,
         score: t.score,
         drawn: rect !== null,
-        holding: rect !== null && t.missed > 0,
+        holding: rect !== null && isHolding(t, now, keepMs),
       })
     }
 
