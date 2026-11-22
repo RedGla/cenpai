@@ -35,6 +35,7 @@ Notes on the 2026-11-22 "before" runs: Chrome on the S23+ over USB (`adb reverse
 Notes on the 2026-11-22 "after" runs (branch `fix/mask-flicker` at the commit that added the uncovered-drop counter; same phone, browser, backend, page and method as the "before" runs):
 
 - **uncovered** in the drops column counts drops where no other drawn mask still covered the dropped track's last box. The counter was added after the "before" runs, so those rows have no uncovered count. On a moving plate a drop can count as uncovered while another mask already covers the plate's new position, so it is an upper bound on drops that showed the plate.
+- **Seen on the phone:** after the "after" runs the user confirmed the masks no longer visibly blink over the plate (2026-11-22). The "twitch seen" column was not reported for the individual runs and stays blank.
 - **Room light:** the phone moved more than in the "before" run (box jitter 13.8% against 8.6%), and a low-confidence false detection sat next to the plate at the start.
 - **Dim light:** the plate stayed under a mask in the start and end screenshots.
 - **Overlap frames went up** (72 and 47, from 8 and 6): the detector often returned the plate as two side-by-side boxes (for example 0.81 and 0.57) that overlap too little to merge, so two steady masks sat over one plate. Neither was dropped while the other held.
