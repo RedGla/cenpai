@@ -34,9 +34,35 @@ Reason, from validation only: R1c has the highest recall at `mask_conf` on both 
 
 Release files: `MyDrive/CenpAI/release/compare/R1c/plate-640/` and `plate-416/`, each with a `MODEL.json` (ONNX 640 sha256 `f9ee2044cc483a1e1ea9f0791104097cd46e6b949a6ed2f76958c99e9455536e`).
 
-## Locked test comparison
+## Locked test comparison (run once, 2026-11-23)
 
-Not yet run.
+Scored once by the notebook's locked cell after the choice above was committed. ONNX at 640, CPU, thresholds read from each model's `MODEL.json`: v0 `conf` 0.81, `mask_conf` 0.10; R1c `conf` 0.31, `mask_conf` 0.15. Test splits: PH BB v5 test (817 images, 863 plates) and Open Images test (2059 images, 2827 plates).
+
+At `mask_conf` (what the app masks):
+
+| model | set | P | R | TP / FP / FN | mAP@0.50 | mAP@0.50:0.95 |
+|---|---|---|---|---|---|---|
+| v0 | PH BB | 0.9977 | 0.9965 | 860 / 2 / 3 | 0.9950 | 0.8885 |
+| v0 | Open Images | 0.9273 | 0.3654 | 1033 / 81 / 1794 | 0.4654 | 0.2727 |
+| v0 | both | 0.9580 | 0.5130 | 1893 / 83 / 1797 | 0.6019 | 0.4329 |
+| R1c | PH BB | 0.9411 | 1.0000 | 863 / 54 / 0 | 0.9949 | 0.7893 |
+| R1c | Open Images | 0.8543 | 0.8065 | 2280 / 389 / 547 | 0.8335 | 0.5237 |
+| R1c | both | 0.8765 | 0.8518 | 3143 / 443 / 547 | 0.8773 | 0.5941 |
+
+At `conf`:
+
+| model | set | P | R |
+|---|---|---|---|
+| v0 | PH BB | 1.0000 | 0.9548 |
+| v0 | Open Images | 0.9879 | 0.1153 |
+| v0 | both | 0.9965 | 0.3117 |
+| R1c | PH BB | 0.9663 | 0.9954 |
+| R1c | Open Images | 0.9193 | 0.7658 |
+| R1c | both | 0.9322 | 0.8195 |
+
+v0's PH BB test score is optimistic: v0 trained on part of that split. Open Images test is clean for both models. On it, R1c finds 2280 of 2827 plates at `mask_conf` against v0's 1033, at lower precision (0.8543 against 0.9273). On both sets together, R1c's precision at `mask_conf` (0.8765) is below the 0.90 target that held on validation (0.9029).
+
+The first attempt at this cell stopped on a missing import before any test image was predicted and wrote no marker; the import was fixed (aca9eb2) and the cell then ran once.
 
 ## Phone test
 
