@@ -183,6 +183,19 @@ describe('one mask per plate', () => {
     expect(s.tracks[0].hits).toBe(3)
   })
 
+  it('merges a track whose box lies inside another one', () => {
+    let s = update(emptyTracker(), [det({ x1: 400, y1: 300, x2: 800, y2: 600 })], 0)
+    s = update(
+      s,
+      [
+        det({ x1: 402, y1: 300, x2: 802, y2: 600 }),
+        det({ x1: 500, y1: 350, x2: 640, y2: 420 }),
+      ],
+      140,
+    )
+    expect(s.tracks.map((t) => t.id)).toEqual([1])
+  })
+
   it('keeps separate plates apart', () => {
     const s = update(
       emptyTracker(),

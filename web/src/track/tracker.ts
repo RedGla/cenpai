@@ -69,6 +69,8 @@ export const MATCH_IOU = 0.2
 export const HYSTERESIS_IOU = 0.3
 /** Tracks whose boxes overlap at least this much are one plate and are merged. */
 export const MERGE_IOU = 0.5
+/** Also merged: the smaller box lies at least this share inside the larger one. */
+export const MERGE_CONTAIN = 0.7
 /** Mask padding as a share of the box's longer side, with a floor in pixels. */
 export const BASE_PAD_RATIO = 0.1
 export const MIN_PAD_PX = 4
@@ -110,6 +112,15 @@ export function iou(a: Box, b: Box): number {
   const inter = w * h
   const union = (a.x2 - a.x1) * (a.y2 - a.y1) + (b.x2 - b.x1) * (b.y2 - b.y1) - inter
   return union > 0 ? inter / union : 0
+}
+
+/** Intersection over the smaller box's area: 1 when one box lies inside the other. */
+export function containment(a: Box, b: Box): number {
+  const w = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1)
+  const h = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1)
+  if (w <= 0 || h <= 0) return 0
+  const small = Math.min((a.x2 - a.x1) * (a.y2 - a.y1), (b.x2 - b.x1) * (b.y2 - b.y1))
+  return small > 0 ? (w * h) / small : 0
 }
 
 export function unionBox(...bs: Box[]): Box {
@@ -197,11 +208,9 @@ function mergeTracks(
     for (let j = i + 1; j < out.length;) {
       const a = out[i]
       const b = out[j]
-      const o = iou(
-        predictBox(a, now, trackLife(a, ttl, longHold)),
-        predictBox(b, now, trackLife(b, ttl, longHold)),
-      )
-      if (o < MERGE_IOU) {
+      const pa = predictBox(a, now, trackLife(a, ttl, longHold))
+      const pb = predictBox(b, now, trackLife(b, ttl, longHold))
+      if (iou(pa, pb) < MERGE_IOU && containment(pa, pb) < MERGE_CONTAIN) {
         j++
         continue
       }
