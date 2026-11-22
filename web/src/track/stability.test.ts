@@ -26,6 +26,7 @@ describe('StabilityMonitor', () => {
     m.frame(33, [a], [{ track: a, rect: a.box }])
     m.frame(66, [], [])
     expect(m.summary().drops).toBe(1)
+    expect(m.summary().uncoveredDrops).toBe(1)
     const b = track(2, 105, 100)
     m.frame(100, [b], [{ track: b, rect: b.box }])
     expect(m.summary().reacquisitions).toBe(1)
@@ -69,5 +70,25 @@ describe('StabilityMonitor', () => {
     m.reset(100)
     expect(m.summary().drops).toBe(0)
     expect(m.summary().frames).toBe(0)
+  })
+})
+
+describe('uncovered drops', () => {
+  it('does not count a drop as uncovered when another mask still covers the plate', () => {
+    const m = new StabilityMonitor(0)
+    const a = track(1, 100, 0)
+    const big = { x1: 50, y1: 50, x2: 300, y2: 200 }
+    const b = track(2, 100, 0)
+    m.frame(
+      0,
+      [a, b],
+      [
+        { track: a, rect: a.box },
+        { track: b, rect: big },
+      ],
+    )
+    m.frame(33, [b], [{ track: b, rect: big }])
+    expect(m.summary().drops).toBe(1)
+    expect(m.summary().uncoveredDrops).toBe(0)
   })
 })

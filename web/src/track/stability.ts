@@ -5,6 +5,12 @@
  */
 import { TRACK_TTL_MS, iou, isHolding, type Box, type Track } from './tracker'
 
+const inside = (inner: Box, outer: Box) =>
+  outer.x1 <= inner.x1 &&
+  outer.y1 <= inner.y1 &&
+  outer.x2 >= inner.x2 &&
+  outer.y2 >= inner.y2
+
 /** A new track this soon after a drop, on an overlapping box, counts as a re-acquisition. */
 export const REACQUIRE_MS = 1000
 export const REACQUIRE_IOU = 0.3
@@ -33,6 +39,8 @@ export interface StabilitySummary {
   /** Frames the whole view was blurred (shutter); masks are not judged on those. */
   shutterFrames: number
   drops: number
+  /** Drops where no other drawn mask still covered the dropped track's last box. */
+  uncoveredDrops: number
   reacquisitions: number
   /** Mean frame-to-frame change in a drawn mask's area, as a share of its previous area. */
   meanAreaChange: number
@@ -60,6 +68,7 @@ export class StabilityMonitor {
   private frames = 0
   private shutterFrames = 0
   private drops = 0
+  private uncovered = 0
   private reacq = 0
   private areaSum = 0
   private areaN = 0
@@ -81,6 +90,7 @@ export class StabilityMonitor {
     this.frames = 0
     this.shutterFrames = 0
     this.drops = 0
+    this.uncovered = 0
     this.reacq = 0
     this.areaSum = 0
     this.areaN = 0
@@ -118,6 +128,7 @@ export class StabilityMonitor {
     for (const [id, k] of this.known) {
       if (k.rect && !drawnIds.has(id)) {
         this.drops += 1
+        if (!drawn.some((d) => inside(k.box, d.rect))) this.uncovered += 1
         this.dropScoreSum += k.score
         this.recentDrops.push({ t: now, box: k.box })
         k.rect = null
@@ -187,6 +198,7 @@ export class StabilityMonitor {
       frames: this.frames,
       shutterFrames: this.shutterFrames,
       drops: this.drops,
+      uncoveredDrops: this.uncovered,
       reacquisitions: this.reacq,
       meanAreaChange: this.areaN ? this.areaSum / this.areaN : 0,
       meanBoxJitter: this.jitterN ? this.jitterSum / this.jitterN : 0,
@@ -201,7 +213,7 @@ export function formatSummary(s: StabilitySummary): string {
   const pct = (v: number) => `${(100 * v).toFixed(1)}%`
   return (
     `${s.seconds.toFixed(0)} s, ${s.frames} frames (${s.shutterFrames} shutter) | ` +
-    `drops ${s.drops}, re-acquired ${s.reacquisitions} | ` +
+    `drops ${s.drops} (uncovered ${s.uncoveredDrops}), re-acquired ${s.reacquisitions} | ` +
     `mask area change ${pct(s.meanAreaChange)}/frame, box jitter ${pct(s.meanBoxJitter)}/detection | ` +
     `overlap frames ${s.fightFrames} | ` +
     `conf before drop ${s.meanScoreBeforeDrop === null ? '-' : s.meanScoreBeforeDrop.toFixed(2)}`
