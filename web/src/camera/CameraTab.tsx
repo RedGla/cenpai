@@ -261,6 +261,17 @@ export default function CameraTab() {
           </span>
         )}
         {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
+        {stats?.stability && (
+          <span data-testid="stability">
+            {stats.stability}{' '}
+            <button onClick={() => pipelineRef.current?.resetStability()}>Reset counters</button>
+          </span>
+        )}
+        {stats?.trackRows.map((row) => (
+          <span key={row} data-testid="track-row">
+            {row}
+          </span>
+        ))}
       </div>
       <div className="controls">
         <label>

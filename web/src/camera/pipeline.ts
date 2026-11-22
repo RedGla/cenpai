@@ -6,11 +6,13 @@ import {
   activeTracks,
   countPlates,
   emptyTracker,
+  keepConfFor,
   keepTimeFor,
   maskRect,
   updateTracker,
   type TrackerState,
 } from '../track/tracker'
+import { StabilityMonitor, formatRow, formatSummary, type DrawnMask } from '../track/stability'
 
 /** The shutter closes when no detection result has arrived for this long. */
 export const SHUTTER_TIMEOUT_MS = 300
@@ -34,6 +36,10 @@ export interface LiveStats {
   held: number
   /** How old the frame on screen was when it was drawn (ms). */
   holdMs: number
+  /** ?debug=1 only: mask stability counters since the last reset (numbers only). */
+  stability: string
+  /** ?debug=1 only: one line per track. */
+  trackRows: string[]
 }
 
 type FrameVideo = HTMLVideoElement & {
@@ -74,7 +80,12 @@ export class LivePipeline {
     debug: '',
     held: 0,
     holdMs: 0,
+    stability: '',
+    trackRows: [],
   }
+  private monitor = new StabilityMonitor(performance.now())
+  /** ?debug=1: times the canvas was resized (a resize clears it). */
+  private resizes = 0
   private queue = new HoldQueue<HTMLCanvasElement>()
   private pool: HTMLCanvasElement[] = []
   /** Held frame the detector is copying right now; it must not be reused until done. */
@@ -177,6 +188,7 @@ export class LivePipeline {
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w
         canvas.height = h
+        this.resizes += 1
       }
       const now = performance.now()
       if (this.hold) {
@@ -220,16 +232,33 @@ export class LivePipeline {
     if (shutter) {
       this.drawShutter(ctx, src, w, h)
       this.s.plates = 0
+      if (this.debug) {
+        this.monitor.shutterFrame(t)
+        this.s.stability = formatSummary(this.monitor.summary())
+      }
       return
     }
     ctx.drawImage(src, 0, 0, w, h)
     const keep = this.keepTime()
+    const drawn: DrawnMask[] = []
     for (const tr of activeTracks(this.tracker, t, keep)) {
       const r = maskRect(tr, t, w, h, keep)
       paintCensor(ctx, src, r, this.censorMode, this.censorScratch, w, h)
+      drawn.push({ track: tr, rect: r })
     }
     this.s.plates = countPlates(this.tracker, t, keep)
-    if (this.debug) this.drawDebug(ctx, t)
+    if (this.debug) {
+      this.drawDebug(ctx, t)
+      const rows = this.monitor.frame(t, this.tracker.tracks, drawn, keep)
+      this.s.trackRows = rows.map(formatRow)
+      this.s.stability = formatSummary(this.monitor.summary()) + `, canvas resizes ${this.resizes}`
+    }
+  }
+
+  /** ?debug=1: start the stability counters over (for a timed test scene). */
+  resetStability() {
+    this.monitor.reset(performance.now())
+    this.resizes = 0
   }
 
   /** A pooled full-size canvas for holding one frame. */
@@ -323,6 +352,7 @@ export class LivePipeline {
           captureTime,
           model.meta.conf,
           this.keepTime(),
+          { startConf: model.maskConf, keepConf: keepConfFor(model.maskConf) },
         )
         if (this.debug) {
           this.s.debug =
