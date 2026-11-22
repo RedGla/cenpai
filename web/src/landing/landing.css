@@ -1,0 +1,274 @@
+/* Start page. Uses the tokens from styles.css. */
+.landing {
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 20px)
+    calc(var(--safe-bottom) + 32px) calc(var(--safe-left) + 20px);
+  background: var(--bg);
+}
+
+.landing > * {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.landing-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wordmark {
+  font-weight: var(--w-strong);
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.landing .chip {
+  background: var(--surface);
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 48px 0 32px;
+}
+
+.hero h1 {
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.lead {
+  margin: 0;
+  font-size: 17px;
+  color: var(--text-2);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.hero-actions .primary {
+  margin-top: 0;
+  padding: 0 28px;
+}
+
+.hero-actions .btn {
+  min-height: 52px;
+}
+
+/* Drawn preview of the camera view. */
+.mock {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, #16181b 0%, #0f1011 55%, #1b1d20 100%);
+}
+
+.mock-road {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 38%;
+  background: #121315;
+  border-top: 1px solid var(--line);
+}
+
+.mock-car {
+  position: absolute;
+  left: 50%;
+  bottom: 24%;
+  width: 52%;
+  height: 40%;
+  transform: translateX(-50%);
+  border-radius: 18px 18px 10px 10px;
+  background: #2a2d32;
+  border: 1px solid var(--line-strong);
+}
+
+.mock-window {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 10%;
+  height: 34%;
+  border-radius: 10px 10px 4px 4px;
+  background: #1a1c1f;
+}
+
+.mock-plate {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  width: 38%;
+  height: 20%;
+  transform: translateX(-50%);
+  border-radius: 3px;
+  background: #000;
+}
+
+.mock-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--overlay);
+  font-size: 13px;
+  font-weight: var(--w-medium);
+}
+
+.mock-pill .dot {
+  width: 8px;
+  height: 8px;
+  background: var(--ok);
+}
+
+.mock-record {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  width: 36px;
+  height: 36px;
+  transform: translateX(-50%);
+  border: 3px solid var(--primary);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px var(--bg);
+  background: var(--primary);
+}
+
+.landing-section {
+  padding: 40px 0 0;
+}
+
+.landing-section h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.landing h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: var(--w-medium);
+  color: var(--text);
+}
+
+.steps,
+.facts,
+.notes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.steps li {
+  display: flex;
+  gap: 14px;
+}
+
+.step-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--text-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.facts {
+  display: grid;
+  gap: 12px;
+}
+
+.facts li {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+@media (min-width: 640px) {
+  .hero h1 {
+    font-size: 48px;
+  }
+
+  .facts {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .mock {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  color: var(--text-2);
+}
+
+.notes li {
+  padding-left: 16px;
+  position: relative;
+}
+
+.notes li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 6px;
+  height: 1px;
+  background: var(--text-3);
+}
+
+.btn.wide {
+  width: 100%;
+  min-height: 52px;
+}
+
+.landing-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.landing-foot a {
+  color: var(--text-2);
+}

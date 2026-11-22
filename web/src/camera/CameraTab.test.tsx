@@ -1,26 +1,18 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import CameraTab from './CameraTab'
 
-beforeEach(() => window.localStorage.clear())
 afterEach(cleanup)
 
-it('explains on first run that nothing leaves the phone, then starts', () => {
+it('words a missing camera for the user and reads as not protecting', () => {
   render(<CameraTab />)
-  const intro = screen.getByRole('dialog', { name: 'CenpAI' })
-  expect(intro).toHaveTextContent(/Nothing leaves the phone/)
-  fireEvent.click(screen.getByTestId('start'))
-  expect(screen.queryByRole('dialog', { name: 'CenpAI' })).not.toBeInTheDocument()
-  expect(window.localStorage.getItem('cenpai.intro.seen')).toBe('1')
-  // jsdom has no camera: the failure is worded for the user and protection reads as off.
   expect(screen.getByRole('alert')).toHaveTextContent(/camera is not available/i)
   expect(screen.getByTestId('shield')).toHaveTextContent('Not protecting')
 })
 
-it('skips the note after the first run and keeps settings in a sheet', () => {
-  window.localStorage.setItem('cenpai.intro.seen', '1')
-  render(<CameraTab />)
-  expect(screen.queryByTestId('start')).not.toBeInTheDocument()
+it('keeps settings in a sheet with a way back to the start page', () => {
+  const onAbout = vi.fn()
+  render(<CameraTab onAbout={onAbout} />)
   const sheet = screen.getByTestId('settings')
   expect(sheet).not.toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Settings' }))
@@ -28,4 +20,6 @@ it('skips the note after the first run and keeps settings in a sheet', () => {
   expect(screen.getByRole('button', { name: 'Benchmark' })).toBeInTheDocument()
   expect(screen.getByTestId('fps')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Record video' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'About CenpAI' }))
+  expect(onAbout).toHaveBeenCalledOnce()
 })
