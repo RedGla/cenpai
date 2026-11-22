@@ -27,10 +27,20 @@ Settings in force for the "before" rows (configuration, not results): `mask_conf
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | before | laptop screen | room | 61 | 677 | 9 | 32 | 6 | 54.9% | 8.6% | 8 | 0.57 | 20 (18 on the screenshot) | | 2026-11-22 |
 | before | laptop screen | dim | 61 | 631 | 6 | 19 | 4 | 63.8% | 11.9% | 6 | 0.46 | 16 (21 on the screenshot) | | 2026-11-22 |
-| after | laptop screen | room | | | | | | | | | | | | |
-| after | laptop screen | dim | | | | | | | | | | | | |
+| after | laptop screen | room | 61 | 659 | 8 | 11 (8 uncovered) | 3 | 9.5% | 13.8% | 72 | 0.43 | 19 | | 2026-11-22 |
+| after | laptop screen | dim | 61 | 661 | 17 | 4 (2 uncovered) | 0 | 7.4% | 7.4% | 47 | 0.68 | 18 | | 2026-11-22 |
 
 Notes on the 2026-11-22 "before" runs: Chrome on the S23+ over USB (`adb reverse`, dev server from the `fix/mask-flicker` worktree), WebGPU 640, `isolated: yes`. The plate was the made-up `XQZ 0000` page full-screen on the laptop; the phone was propped and the laptop was held by hand, so the plate moved a little. The overlay was reset and read over Chrome remote debugging after 61 s. Preview fps is the status-line value at the end of the run; a phone screenshot taken a second later showed the value in brackets.
+
+Notes on the 2026-11-22 "after" runs (branch `fix/mask-flicker` at the commit that added the uncovered-drop counter; same phone, browser, backend, page and method as the "before" runs):
+
+- **uncovered** in the drops column counts drops where no other drawn mask still covered the dropped track's last box. The counter was added after the "before" runs, so those rows have no uncovered count. On a moving plate a drop can count as uncovered while another mask already covers the plate's new position, so it is an upper bound on drops that showed the plate.
+- **Room light:** the phone moved more than in the "before" run (box jitter 13.8% against 8.6%), and a low-confidence false detection sat next to the plate at the start.
+- **Dim light:** the plate stayed under a mask in the start and end screenshots.
+- **Overlap frames went up** (72 and 47, from 8 and 6): the detector often returned the plate as two side-by-side boxes (for example 0.81 and 0.57) that overlap too little to merge, so two steady masks sat over one plate. Neither was dropped while the other held.
+- **Masks are larger** than before: the padding now covers the usual gap between detections from the start, and a track seen 3 or more times is held 1 s. Allowed by the rules (a mask may be too big, never too small), but a false detection now stays covered longer too.
+- **Discarded runs** (not in the table): one "after" room run aimed past the plate at low-confidence false detections, one taken with the plate much closer, and one dim run where the laptop showed an older two-line version of the test page that the detector did not find at all (0 boxes, plate readable on screen). That last one is a detector miss the tracker cannot fix.
+- **Benchmark button** after the dim run, on the dev server over USB: WebGPU 640, median 141.3 ms, 95th percentile 147.1 ms, whole frame median 187.3 ms, preview 15 fps while it ran. The Phase 4 benchmark on the deployed app read 93.3 ms median and 21-24 fps (`docs/reports/phone_benchmark.md`); the "before" runs here already read about 143 ms per inference live, so the slower inference was present before this change and is not caused by it.
 
 ## Causes the counters confirm
 
