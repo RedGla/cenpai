@@ -299,7 +299,7 @@ export default function CameraTab() {
             {env.offlineReady ? ', works offline' : ''}
           </span>
         </div>
-        {debug && (
+        {debug && (stats?.debug || stats?.stability || !!stats?.trackRows.length) && (
           <div className="debug-overlay" data-testid="debug-panel">
             {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
             {stats?.stability && (
