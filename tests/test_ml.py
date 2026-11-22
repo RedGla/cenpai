@@ -166,8 +166,13 @@ def test_fixed_splits_win_and_related_training_images_are_dropped(tmp_path):
     _write(kb, "k1.png", kb_img, "3 0.5 0.5 0.9 0.5\n")                       # keyboard box: dropped, image kept
     near3 = kb_img.copy()
     near3[2, 2] ^= 1
-    _write(kb, "k2.png", near3, "3 0.5 0.5 0.9 0.5\n")                        # near duplicate within a dedupe source
+    _write(kb, "k2.png", near3, "3 0.5 0.5 0.9 0.5\n")                        # near duplicate within the source: kept
     _write(kb, "k3.png", _img(rng), "")
+    c_img = _img(rng)
+    _write(tr, "c.png", c_img, "0 0.5 0.5 0.2 0.1\n")
+    near4 = c_img.copy()
+    near4[3, 3] ^= 1
+    _write(kb, "k4.png", near4, "")                                           # near duplicate of an earlier source: dropped
     cfg = {"version": "v", "sources": [
         {"name": "ph", "path": "ph"},
         {"name": "oi", "path": "oi", "splits": {"train": "train", "validation": "val", "test": "test"}},
@@ -181,7 +186,8 @@ def test_fixed_splits_win_and_related_training_images_are_dropped(tmp_path):
     assert rows[("oi", "train/images/t2.png")]["split"] == "train"
     assert ("oi", "train/images/t1.png") not in rows and ("tr", "images/a.png") not in rows
     assert rep["dropped_split_conflict"] == 2 and rep["dropped_near_duplicate"] == 1 and rep["excluded"] == 1
-    assert rows[("kb", "images/k1.png")]["boxes"] == "0" and ("kb", "images/k2.png") not in rows
+    assert rows[("kb", "images/k1.png")]["boxes"] == "0" and ("kb", "images/k2.png") in rows
+    assert ("kb", "images/k4.png") not in rows and ("tr", "images/c.png") in rows
     assert rows[("ph", "images/p0_jpg.rf.0000.png")]["split"] == rows[("ph", "images/p0_jpg.rf.ffff.png")]["split"]
     assert {r["split"] for r in rows.values() if r["source"] == "ph"} == set(ds.SPLITS)
     assert rep["sources"]["oi"]["val"] == {"images": 1, "boxes": 1, "negatives": 0}

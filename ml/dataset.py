@@ -17,7 +17,8 @@ Per-source options (ml/datasets.yaml):
   require_boxes  skip images without a plate box (their plates may be unlabeled)
   max_images     random sample of this many training images (seeded); fixed val and test images are all kept
   exclude        image paths, relative to the source folder, to leave out
-  dedupe         drop an image when an image kept before it is a near duplicate (sources listed first win)
+  dedupe         drop an image when it is a near duplicate of an image kept from another source (sources listed
+                 first win); near duplicates within the source are kept, because video frames chain into one group
 """
 from __future__ import annotations
 
@@ -264,15 +265,15 @@ def prepare(cfg: dict, out_root: Path, seed: int = 0, data_root: str | Path | No
             fixed_of[g] = r["fixed"]
     free = {g: (n, False) for g, n in sizes.items() if g not in fixed_of}
     split_of = assign_splits(free, tuple(cfg.get("ratios", (0.70, 0.15, 0.15))), seed) | fixed_of
-    kept, seen_groups = [], set()
+    kept, sources_in = [], defaultdict(set)              # group -> sources with a kept image in it
     for r in recs:
         if r["fixed"] and r["fixed"] != split_of[r["group"]]:
             stats["dropped_split_conflict"] += 1
-        elif r["dedupe"] and r["group"] in seen_groups:
+        elif r["dedupe"] and sources_in[r["group"]] - {r["source"]}:
             stats["dropped_near_duplicate"] += 1
         else:
             kept.append(r)
-            seen_groups.add(r["group"])
+            sources_in[r["group"]].add(r["source"])
     recs = kept
 
     for s in SPLITS:

@@ -55,7 +55,7 @@ sources:
     labels: human
     train_only: true
     negatives: true             # the keyboard boxes are dropped: no-plate images
-    dedupe: true                # one keyboard filmed many times; near duplicates collapse
+    dedupe: true                # drops near duplicates of plate sources; its own similar frames are kept
     exclude: []                 # images that show a plate, from the review cell in build_dataset_v2.ipynb
   # Owner datasets: add them here after /dataset-add. Reviewed OWLv2 drafts use `labels: owlv2-reviewed`.
   # Not added: KEYBOARD (test-m8ckl/keyboard-ataj7) has no published Roboflow version to export (docs/datasets.md).
