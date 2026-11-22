@@ -5,6 +5,7 @@ import { LivePipeline, type LiveStats } from './pipeline'
 import { CanvasRecorder } from './record'
 import { median, percentile } from './stats'
 import { shareFile, timestampName } from './share'
+import { attachVideoFile, detachVideoFile, videoFileMode } from './videoFile'
 
 interface BenchResult {
   backend: string
@@ -63,6 +64,18 @@ export default function CameraTab() {
   const [notice, setNotice] = useState<string | null>(null)
   const [bench, setBench] = useState<BenchResult | null>(null)
   const [benchRunning, setBenchRunning] = useState(false)
+  // Developer setting (?video=1): a local video file replaces the camera.
+  const fileMode = useRef(videoFileMode()).current
+  const fileUrlRef = useRef<string | null>(null)
+  const [fileName, setFileName] = useState<string | null>(null)
+
+  const pickFile = (file: File | undefined) => {
+    const video = videoRef.current
+    if (!file || !video) return
+    if (fileUrlRef.current) detachVideoFile(video, fileUrlRef.current)
+    fileUrlRef.current = attachVideoFile(video, file)
+    setFileName(file.name)
+  }
 
   const runBenchmark = async () => {
     const pipeline = pipelineRef.current
@@ -177,7 +190,7 @@ export default function CameraTab() {
     const video = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas) return
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (!fileMode && !navigator.mediaDevices?.getUserMedia) {
       setCameraError('Camera is not available. Open the app on localhost or over HTTPS.')
       return
     }
@@ -190,6 +203,17 @@ export default function CameraTab() {
     pipelineRef.current = pipeline
     pipeline.start()
     const poll = window.setInterval(() => setStats({ ...pipeline.stats }), 250)
+
+    if (fileMode) {
+      // No camera: frames come from the file the user picks, through the same pipeline.
+      return () => {
+        window.clearInterval(poll)
+        pipeline.stop()
+        pipelineRef.current = null
+        if (fileUrlRef.current) URL.revokeObjectURL(fileUrlRef.current)
+        fileUrlRef.current = null
+      }
+    }
 
     navigator.mediaDevices
       .getUserMedia(CAMERA_CONSTRAINTS)
@@ -262,6 +286,20 @@ export default function CameraTab() {
         )}
         {stats?.debug && <span data-testid="debug">{stats.debug}</span>}
       </div>
+      {fileMode && (
+        <div className="controls">
+          <label>
+            Video file (stays on this device){' '}
+            <input
+              type="file"
+              accept="video/*"
+              data-testid="video-file"
+              onChange={(e) => pickFile(e.target.files?.[0])}
+            />
+          </label>
+          {fileName && <span data-testid="video-file-name">{fileName}</span>}
+        </div>
+      )}
       <div className="controls">
         <label>
           Censor{' '}
