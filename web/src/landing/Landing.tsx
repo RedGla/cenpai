@@ -133,6 +133,16 @@ export default function Landing({ onOpenCamera }: Props) {
   const [open, setOpen] = useState<number | null>(0)
   useReveal(rootRef)
 
+  // Always start at the top: the browser may restore an old scroll position.
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    // Jump, do not glide: the page uses smooth scrolling for its section links.
+    el.style.scrollBehavior = 'auto'
+    el.scrollTop = 0
+    el.style.scrollBehavior = ''
+  }, [])
+
   const envText = env.online ? (env.installed ? 'Installed' : 'In browser') : 'Offline'
   const jump = (id: string) =>
     rootRef.current?.querySelector(`#${id}`)?.scrollIntoView({ behavior: 'smooth' })

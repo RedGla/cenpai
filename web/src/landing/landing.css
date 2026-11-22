@@ -88,8 +88,9 @@
 
 @supports (backdrop-filter: blur(1px)) {
   .lnav.scrolled {
-    background: rgba(8, 9, 10, 0.6);
-    backdrop-filter: blur(14px) saturate(140%);
+    /* Mostly opaque: a lighter tint lets the lime button smear through the blur. */
+    background: rgba(8, 9, 10, 0.9);
+    backdrop-filter: blur(12px);
   }
 }
 
