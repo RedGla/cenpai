@@ -66,7 +66,12 @@ The first attempt at this cell stopped on a missing import before any test image
 
 ## Phone test
 
-Not yet run.
+Not yet scored. How it is run, following `docs/protocols/data_and_phone_test.md`:
+
+1. Put R1c's `plate_640.onnx` and `plate_416.onnx` (from `MyDrive/CenpAI/release/compare/R1c/`) into `web/public/models/r1c-640/` and `r1c-416/`; their `MODEL.json` files are already there, and the app refuses a file whose SHA-256 does not match.
+2. `npm run dev` in `web/`, then open `http://localhost:5173/?video=1` for v0 and `http://localhost:5173/?video=1&model=r1c` for R1c. Play each final clip once per model and keep the censored recording.
+3. Two reviewers fill `phone_test_results.csv` (kept with the clips, never in Git), one row per plate appearance per model.
+4. `python tools/score_phone_test.py <path to the csv>` prints the tables for this section.
 
 ## Limitations
 
@@ -74,3 +79,5 @@ Not yet run.
 - Wall times for R1c and C3-s0 cover only the epochs after a resume.
 - The matrix was cut down to fit the free-GPU quota.
 - Internet data comes from other countries.
+- No box-level scores on the phone footage: it is not labelled, so the phone test counts leaks only.
+- Few phone clips, recorded by the family with their own vehicles; per-condition groups are examples, not evidence.
