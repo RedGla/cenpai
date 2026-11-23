@@ -115,9 +115,9 @@ Leaks per condition, s000 left out (counts only; groups this small support no cl
 
 False masks on the no-plate clip (one clip per model, 2 samples per second): v0 17.5 s, R1c 3.0 s, the same under both thresholds.
 
-### Mask size
+### Extra measurement: mask size
 
-Measured on every frame of the 56 recordings, not sampled: a frame counts when solid black box-shaped regions (the app's mask) cover more than half of it.
+This table is outside the protocol: its numbers come from a pixel count on the 56 censored recordings, not from notebook output or `phone_test_results.csv`. It was added because the recordings showed masks far larger than the plates. Every frame was measured, not sampled: a frame counts when solid black box-shaped regions (the app's mask) cover more than half of it.
 
 | model | frames | frames with masks over half the frame | fully black frames | frames with the shutter closed | clips with any frame over half |
 |---|---|---|---|---|---|
