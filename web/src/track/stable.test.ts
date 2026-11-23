@@ -217,14 +217,16 @@ describe('hold by evidence', () => {
     expect(update(s, [], TRACK_TTL_MS + 1).tracks).toHaveLength(0)
   })
 
-  it('holds a track seen several times longer, growing its padding, then ends it', () => {
+  it('holds a track seen several times longer, growing its padding up to the cap, then ends it', () => {
     let s = emptyTracker()
     for (let i = 0; i < 3; i++) s = update(s, [det(PLATE)], i * DETECT_MS)
     const last = 2 * DETECT_MS
     expect(activeTracks(s, last + 800)).toHaveLength(1)
+    const w0 = maskRect(s.tracks[0], last + 100, W, H)
     const w1 = maskRect(s.tracks[0], last + 500, W, H)
     const w2 = maskRect(s.tracks[0], last + 900, W, H)
-    expect(w2.x2 - w2.x1).toBeGreaterThan(w1.x2 - w1.x1)
+    expect(w1.x2 - w1.x1).toBeGreaterThan(w0.x2 - w0.x1)
+    expect(w2).toEqual(w1)
     expect(activeTracks(s, last + LONG_HOLD_MS + 1)).toHaveLength(0)
     expect(update(s, [], last + LONG_HOLD_MS + 1).tracks).toHaveLength(0)
   })

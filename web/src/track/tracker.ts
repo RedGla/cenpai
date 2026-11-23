@@ -82,6 +82,18 @@ export const MIN_PAD_PX = 4
 export const GROW_PER_FRAME = 0.04
 export const FRAME_MS = 1000 / 30
 /**
+ * Setting: the growth padding stops at this share of the longer side (10 frame-times of
+ * growth, past the 300 ms shutter floor). Without a cap a plate held unseen for the 1 s long
+ * hold grew by 1.2x its size on every side, and close plates covered the whole frame.
+ */
+export const MAX_GROW_SHARE = 0.4
+/**
+ * Setting: the mask follows the estimated motion for at most this long after the last
+ * detection. Past it, a long-held track stays where it was last moved to, instead of sliding
+ * across empty background.
+ */
+export const MAX_SHIFT_MS = TRACK_TTL_MS
+/**
  * Setting: after a re-detection the grown padding relaxes back toward the base padding with
  * this time constant (exponential), so it eases down over several frames instead of snapping.
  */
@@ -169,7 +181,7 @@ function growShare(t: Track, now: number, life: number): number {
   const grow = (GROW_PER_FRAME * unseen) / FRAME_MS
   const since = Math.max(0, now - t.lastSeen)
   const carry = t.padCarry * Math.exp(-since / PAD_RELAX_MS)
-  return Math.max(grow, carry)
+  return Math.min(MAX_GROW_SHARE, Math.max(grow, carry))
 }
 
 /** Fold a matched detection into the smoothed box. `dt` ms since the last detection. */
@@ -362,8 +374,9 @@ export function keepTimeFor(intervalMs: number): number {
  * smoothed box moved the same way, so neither a wrong motion estimate nor smoothing lag can
  * slide the mask off the plate: the mask always contains the latest raw box plus padding.
  * Padding is 10% of the longer side (at least 4 px), plus GROW_PER_FRAME of the longer side
- * for every 1/30 s since the frame the box was last detected on; after a re-detection the
- * grown padding relaxes over PAD_RELAX_MS instead of snapping back.
+ * for every 1/30 s since the frame the box was last detected on, up to MAX_GROW_SHARE; after a
+ * re-detection the grown padding relaxes over PAD_RELAX_MS instead of snapping back. The motion
+ * shift stops after MAX_SHIFT_MS.
  */
 export function maskRect(
   t: Track,
@@ -374,7 +387,8 @@ export function maskRect(
   longHold = LONG_HOLD_MS,
 ): Box {
   const life = trackLife(t, ttl, longHold)
-  const dt = Math.min(Math.max(now - t.lastSeen, -life), life)
+  const reach = Math.min(life, MAX_SHIFT_MS)
+  const dt = Math.min(Math.max(now - t.lastSeen, -reach), reach)
   const b = unionBox(
     t.box,
     shift(t.box, t.vx * dt, t.vy * dt),

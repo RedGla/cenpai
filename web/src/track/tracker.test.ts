@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MAX_SHIFT_MS,
   TRACK_TTL_MS,
   activeTracks,
   countPlates,
@@ -162,6 +163,31 @@ describe('mask follows motion safely', () => {
     const r = maskRect(t, 300, 1280, 720)
     expect(r.x1).toBeLessThanOrEqual(140 - 10)
     expect(r.x2).toBeGreaterThanOrEqual(Math.ceil(predictBox(t, 300).x2) + 10)
+  })
+})
+
+describe('mask size limits', () => {
+  // Three detections earn the long hold (1 s), the case that grew masks to the whole frame.
+  const heldTrack = (dx = 0) => {
+    let s = updateTracker(emptyTracker(), [det(500, 300, 600, 340)], 0, 0.8)
+    s = updateTracker(s, [det(500 + dx, 300, 600 + dx, 340)], 100, 0.8)
+    s = updateTracker(s, [det(500 + 2 * dx, 300, 600 + 2 * dx, 340)], 200, 0.8)
+    return s.tracks[0]
+  }
+
+  it('stops growing the padding at MAX_GROW_SHARE of the longer side', () => {
+    const t = heldTrack()
+    const r = maskRect(t, 200 + 950, 1280, 720)
+    // 100 px box: base 10 px plus at most 40 px growth on each side.
+    expect(r.x2 - r.x1).toBeLessThanOrEqual(100 + 2 * (10 + 40))
+    expect(activeTracks({ tracks: [t], nextId: 2 }, 200 + 950)).toHaveLength(1)
+  })
+
+  it('stops following the motion after MAX_SHIFT_MS', () => {
+    const t = heldTrack(20) // moving right
+    const atLimit = maskRect(t, 200 + MAX_SHIFT_MS, 1280, 720)
+    const later = maskRect(t, 200 + 950, 1280, 720)
+    expect(later).toEqual(atLimit)
   })
 })
 
