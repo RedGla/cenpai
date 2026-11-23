@@ -40,6 +40,7 @@ describe('initialView', () => {
     expect(initialView('', true)).toBe('camera')
     expect(initialView('?camera', false)).toBe('camera')
     expect(initialView('?debug=1', false)).toBe('camera')
+    expect(initialView('?video=1', false)).toBe('camera')
   })
   it('always shows the start page for ?about', () => {
     expect(initialView('?about', true)).toBe('landing')
