@@ -55,3 +55,32 @@ From the two "before" rows:
 6. **Blur or pixelation shimmer: not tested.** Both runs used Solid.
 
 Also found: only 677 and 631 frames were drawn in 61 s (about 10-11 a second) while the fps counter read 16-20. The fps counter counts camera frame callbacks; with the frame hold on, the hold queue releases frames in bursts after each detection and skips all but the newest 2 (`MAX_RELEASABLE`), so fewer frames reach the screen than the counter shows. That uneven release may itself look like a twitch.
+
+## Shutter flicker on slow detectors (2026-11-23)
+
+On 2026-11-22 the view in Firefox on the laptop kept switching between clear and fully blurred. Cause: a held frame that waits more than a fixed 300 ms for a detection is released blurred (`MAX_HOLD_MS`), and the laptop's detections then came back 290-305 ms after capture, right on that line. The fix (`web/src/camera/timing.ts`) makes three limits follow the measured detector:
+
+- **Hold limit:** 1.5 × (capture-to-result latency + interval between results), between 300 and 900 ms. A frame captured while the detector is busy waits for the current result and then for a later frame's result, so latency alone was too short (tried first: still 100% blurred).
+- **Frames shown per release:** about one result interval of frames (was 2). One slow detection releases a batch of frames; showing them one per tick keeps motion smooth, where the cap of 2 skipped the rest (tried with the cap: 5 drawn frames a second).
+- **Stall time-out:** the smoothed interval plus 4 × its smoothed spread, and at least 1.5 intervals and 300 ms.
+
+Still fail-closed: a frame is shown only after a detection for it or a later frame, and a stalled detector still blurs the view. `?debug=1` now also shows `blurred: hold N, timeout M`, and `?debug=1&slow=N` holds each detection back N ms with the detector kept busy, to reproduce a slow detector on a fast device.
+
+All runs: 60 s after **Reset counters**, `?debug=1`, WebGPU 640, dev servers on the laptop (`develop` at b3f3aa7 on port 5178, `fix/shutter-flicker` on 5179), no plate in view. **Frames drawn** and **blurred** are from the stability line; **behind** is the `Holding … ms behind` value at the end of the run. The same `&slow=230` patch was applied to a local copy of `develop` for the slow rows (not committed there).
+
+| run | device and browser | detector | frames drawn | blurred | behind | fps counter | Benchmark median / p95 |
+|---|---|---|---|---|---|---|---|
+| develop | laptop, Firefox 160 (fresh profile, real webcam, driven over WebDriver BiDi) | as is, about 50-100 ms | 1073 | 10 | 143 ms | 19-20 | |
+| fix | same | as is | 1170 | 0 | 192 ms | 20 | |
+| develop | same | `&slow=230` | 1041 | 1029 | 305 ms | 20 | |
+| fix | same | `&slow=230` | 1194 | 3 | 752 ms | 20 | |
+| develop | S23+, Chrome 157 (USB, remote debugging) | as is | 1010 | 0 | 136 ms | 24-29 | 67.6 / 86.5 ms |
+| fix | same | as is | 1208 | 0 | 213 ms | 17-23 | 112.6 / 118.0 ms |
+| develop (rerun) | same | as is | 788 | 0 | 167 ms | 18-22 | 109.5 / 115.3 ms |
+
+Notes:
+
+- **Phone runs were back to back** (develop, fix, develop again) and the phone warmed up: the battery read 38.3 °C after the third run, and the Benchmark, which times only the detector, went from 67.6 to about 110 ms. Compare the fix with the develop rerun (same warm state): 1208 against 788 frames drawn, about 50% more, for about 45 ms more delay.
+- **Laptop, detector as is:** inference was about 50-100 ms on 2026-11-23, against about 217 ms on 2026-11-22 when a Twitch video and a second CenpAI tab shared the GPU, so the unmodified build barely blurred. The `&slow=230` rows recreate the slow case.
+- **The fix on a slow detector trades blur for delay:** about 0.75 s behind instead of a blurred view.
+- Not measured here: masks over the `XQZ 0000` test plate with the fix. The drop counters in these runs come from whatever the cameras saw, not a fixed scene.
