@@ -1,17 +1,61 @@
 # Input to `python -m ml.dataset`. One entry per source; facts and decisions live in docs/datasets.md.
 # Bump `version` whenever sources or labels change: a prepared version is never rebuilt in place.
-version: v1
+# Paths are relative to the data folder in the CENPAI_DATA setting (on Colab: /content/work, filled from Drive by
+# notebooks/build_dataset_v2.ipynb). The options are listed at the top of ml/dataset.py.
+# Order matters: when images from two sources are near duplicates, a `dedupe` source loses to the one listed first.
+# Family-car test videos never appear here (docs/protocols/data_and_phone_test.md).
+version: v2
 ratios: [0.70, 0.15, 0.15]
 sources:
+  - name: license-plate-detection-ph-bb-v5
+    path: raw/license-plate-detection-ph-bb-v5
+    plate_classes: [0]          # names: ['license-plate'] (the notebook prints data.yaml to confirm)
+    labels: human
+    # No `splits`: the Roboflow split may hold related images in train and test, so the images are re-split
+    # 70/15/15 by group (augmented copies share their original name before `.rf.<hash>`).
+  - name: open-images-v7-plates
+    path: raw/open-images-v7-plates
+    plate_classes: [0]          # "Vehicle registration plate" (/m/01jfm_), exported alone by FiftyOne
+    labels: human
+    splits: {train: train, val: val, test: test}   # Google's official splits: val chooses, test is scored once
+    dedupe: true
   - name: usp-ph-plates-v2
-    path: C:/Users/rapha/CenpAI-data/raw/usp-philippine-license-plates-v2
+    path: raw/usp-philippine-license-plates-v2
     plate_classes: [0]          # names: ['license-plate']
     labels: human
     train_only: true            # 38 source images, augmented copies; see docs/datasets.md
+    dedupe: true
   - name: ph-plate-vehicle-v7
-    path: C:/Users/rapha/CenpAI-data/raw/research-ph-plate-vehicle-v7
+    path: raw/research-ph-plate-vehicle-v7
     plate_classes: [7]          # 'license-plate' among 13 classes
     labels: human
     train_only: true            # official splits leak; plates unlabeled in many frames
     require_boxes: true         # keep only frames with a labelled plate
+    dedupe: true
+  - name: motorcycle-plate-zeroexperiments-v5
+    path: raw/motorcycle-license-plate-zeroexperiments-v5
+    plate_classes: [0]          # names: ['License Plate']
+    labels: human
+    train_only: true
+    dedupe: true
+  - name: motorcycle-plate-hanoi-v2
+    path: raw/motorcycle-license-plate-hanoi-v2
+    plate_classes: [0]          # names: ['license-plate']
+    labels: human
+    train_only: true
+    dedupe: true
+  - name: ccpd2019-sample
+    path: raw/ccpd2019-sample   # sampled from the Blur, Tilt, Rotate, FN and Challenge subsets; boxes from file names
+    plate_classes: [0]
+    labels: human
+    train_only: true
+    dedupe: true
+  - name: keyboard-rover-v4
+    path: raw/keyboard-rover-v4
+    labels: human
+    train_only: true
+    negatives: true             # the keyboard boxes are dropped: no-plate images
+    dedupe: true                # drops near duplicates of plate sources; its own similar frames are kept
+    exclude: []                 # images that show a plate, from the review cell in build_dataset_v2.ipynb
   # Owner datasets: add them here after /dataset-add. Reviewed OWLv2 drafts use `labels: owlv2-reviewed`.
+  # Not added: KEYBOARD (test-m8ckl/keyboard-ataj7) has no published Roboflow version to export (docs/datasets.md).
