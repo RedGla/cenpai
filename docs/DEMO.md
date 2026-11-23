@@ -1,6 +1,6 @@
 # CenpAI demo guide
 
-How to run the live plate-censoring demo for the **v0.4** build, presented on 2026-11-24 at 7 am with `docs/presentation/cenpai_2026-11-24.pptx` (the demo is slide 8). The script comes from `docs/PLAN.md` section 6.
+How to run the live plate-censoring demo for the **v0.4** build, presented on 2026-11-24 at 7 am with `docs/presentation/cenpai_2026-11-24.pptx` (the demo is slide 9; slide 2 covers what changed since last week). The script comes from `docs/PLAN.md` section 6.
 
 Reference setup: Chrome on the Samsung Galaxy S23+ (the demo phone), Firefox on the Windows laptop (the backup).
 
@@ -38,12 +38,12 @@ scrcpy over USB (installed on the laptop with winget; adb comes with it):
 2. On the laptop: `scrcpy --stay-awake --no-audio`
 3. Put the scrcpy window on the projector screen. Airplane mode does not affect USB mirroring.
 
-## Demo order (about 3 minutes, slide 8)
+## Demo order (about 3 minutes, slide 9)
 
 1. Turn on airplane mode in front of the panel. Open CenpAI from the home screen.
 2. Point at the printed plates and the toy car. Move the phone. Show the shield indicator ("Shield on"), the plates-covered count and the inference time on the status line.
 3. Record 10 seconds. Stop. Open the file from the gallery: plates are covered.
-4. Back to the slides: limitations (slide 9), then next steps (slide 10).
+4. Back to the slides: limitations (slide 10), then next steps (slide 11).
 
 Tap-to-keep is **not** in v0.4: do not try it, and present it only as planned.
 ## Fallback order
