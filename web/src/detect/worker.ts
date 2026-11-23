@@ -8,6 +8,7 @@ import * as ort from 'onnxruntime-web/webgpu'
 import ortMjsUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url'
 import ortWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url'
 import { PAD_VALUE, letterboxToTensor } from './letterbox'
+import { modelDir } from './modelFolder'
 import { postprocess } from './postprocess'
 import type { BackendUsed, FromWorker, ToWorker } from './protocol'
 import type { Detection, ModelMeta } from './types'
@@ -85,7 +86,7 @@ async function init(msg: Extract<ToWorker, { type: 'init' }>) {
   // Must be set before the first session: the WebAssembly runtime starts its threads then.
   ort.env.wasm.numThreads = msg.threads
   try {
-    const model = await loadModel(`${base}models/plate-${msg.size}/`)
+    const model = await loadModel(modelDir(base, msg.model, msg.size))
     if (model.meta.imgsz !== msg.size) throw new Error('MODEL.json imgsz does not match the folder')
     meta = model.meta
     size = msg.size

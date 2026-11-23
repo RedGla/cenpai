@@ -27,4 +27,20 @@ Built by `notebooks/build_dataset_v2.ipynb` from `ml/datasets.yaml` (version `v2
 - Images are grouped by original source name and by near duplicates (dHash ≤ 4) across every source. A group that holds a validation or test image goes to that split, and any training-only image in it is dropped. The notebook must print 0 groups in more than one split and 0 images shared between training and validation or test.
 - The family-car test videos never enter a dataset, a manifest or this file.
 
-Vetting (2026-11-22): licenses were read on each source page. 20 images were looked at for each Roboflow source (one block of images at a random offset; Roboflow lists images by random ID) and for Open Images validation (seed 0). Each matched its description. CCPD's 20 images are looked at in the notebook. Final counts per source and split are not measured yet: copy them from the notebook's cell 10 table once it has run.
+Vetting (2026-11-22): licenses were read on each source page. 20 images were looked at for each Roboflow source (one block of images at a random offset; Roboflow lists images by random ID) and for Open Images validation (seed 0). Each matched its description. CCPD's 20 images are looked at in the notebook.
+
+Final counts, measured on 2026-11-23 from the saved `dataset-v2-manifest.csv` (21,829 rows), images / plate boxes:
+
+| Source | Train | Val | Test |
+|---|---|---|---|
+| `license-plate-detection-ph-bb-v5` | 3,892 / 4,171 | 823 / 823 | 817 / 863 |
+| `open-images-v7-plates` | 5,362 / 7,842 | 722 / 981 | 2,059 / 2,827 |
+| `motorcycle-plate-zeroexperiments-v5` | 1,845 / 3,358 | - | - |
+| `motorcycle-plate-hanoi-v2` | 1,748 / 1,748 | - | - |
+| `ccpd2019-sample` | 1,991 / 1,991 | - | - |
+| `keyboard-rover-v4` | 2,409 / 0 | - | - |
+| `usp-ph-plates-v2` | 92 / 92 | - | - |
+| `ph-plate-vehicle-v7` | 69 / 231 | - | - |
+| Total | 17,408 / 19,433 | 1,545 / 1,804 | 2,876 / 3,690 |
+
+Groups in more than one split: 0. Images (by SHA-256) in more than one split: 0. The training total matches the 17,408-image list the comparison notebook printed. Synthetic images are not in the manifest; they sit in their own training-only folders.

@@ -1,6 +1,6 @@
 # Detector comparison (Phase 5)
 
-Status: model choice locked on 2026-11-23, before any test split was read. Test and phone sections follow once they are measured.
+Status: model choice locked on 2026-11-23, before any test split was read. The locked test comparison and the phone test were each run once after that.
 
 All numbers below are copied from `notebooks/train_detector_compare.ipynb` output on validation (PH BB v5 val plus Open Images val). Thresholds come from validation by the notebook's rule: `conf` is the highest confidence with recall at least 0.95, else best F1; `mask_conf` is the lowest confidence not below 0.10 with precision at least 0.90.
 
@@ -66,7 +66,65 @@ The first attempt at this cell stopped on a missing import before any test image
 
 ## Phone test
 
-Not yet run.
+Run once on 2026-11-23, after the model choice was locked.
+
+How it was run:
+
+1. 36 usable family-car clips were split before any playback: 8 look clips (one per car condition plus one motorcycle clip) and 28 final clips. One clip was unusable (over-exposed). Only the final clips are scored here.
+2. Each final clip was played once through each locked model in video-file mode (`?video=1` for v0, `?video=1&model=r1c` for R1c), on a laptop in Chromium, WebGPU, 640 px, solid masks, with a fresh page load per clip. The censored output was recorded by the app's own recorder: 56 recordings.
+3. The recordings were relabelled with shuffled names, so scoring was blind to the model. Frames sampled at 2 per second were scored twice under two thresholds:
+   - normal: a plate counts as readable if most of its characters can be read in the frame;
+   - strict: readable if two or more characters can be made out, or any legible part of the plate is outside the mask; when unsure, it counts as leaked.
+4. One row per plate appearance per model went into `phone_test_results.csv` (kept with the clips, never in Git), and `python tools/score_phone_test.py` produced the tables below. Uncovered frames are estimated as leaked samples times the recording's frame rate over 2.
+
+Each recording starts with one frame (sample s000) left over from the playback setup: the clip was paused and rewound before recording started, so the first recorded frame is the last frame painted during that pause, followed by a short all-black run. A clip that plays straight through, or the live camera, does not produce it. The main tables leave s000 out; the second pair counts it.
+
+Leak rate, s000 left out:
+
+| threshold | model | leaked / appearances | leak rate | 95% CI | uncovered frames per leak |
+|---|---|---|---|---|---|
+| normal | v0 | 13 / 39 | 0.333 | 0.206-0.490 | 33.6 (median 27, max 106) |
+| normal | R1c | 2 / 34 | 0.059 | 0.016-0.191 | 22.0 (median 29, max 29) |
+| strict | v0 | 26 / 51 | 0.510 | 0.377-0.641 | 27.8 (median 17, max 106) |
+| strict | R1c | 3 / 48 | 0.062 | 0.021-0.168 | 21.7 (median 21, max 29) |
+
+Leak rate with s000 counted:
+
+| threshold | model | leaked / appearances | leak rate | 95% CI |
+|---|---|---|---|---|
+| normal | v0 | 17 / 39 | 0.436 | 0.293-0.590 |
+| normal | R1c | 6 / 34 | 0.176 | 0.083-0.335 |
+| strict | v0 | 35 / 51 | 0.686 | 0.550-0.797 |
+| strict | R1c | 13 / 48 | 0.271 | 0.166-0.410 |
+
+The two thresholds split plate appearances differently (the strict pass counted more re-entries of the same plate), so the denominators differ.
+
+Leaks per condition, s000 left out (counts only; groups this small support no claims):
+
+| condition | normal v0 | normal R1c | strict v0 | strict R1c |
+|---|---|---|---|---|
+| 1 Approach | 2 / 3 | 0 / 3 | 2 / 3 | 0 / 3 |
+| 2 Pan in from the edge | 4 / 9 | 0 / 8 | 11 / 20 | 0 / 15 |
+| 3 Angles | 3 / 3 | 2 / 3 | 3 / 3 | 2 / 4 |
+| 4 Night | 0 / 3 | 0 / 3 | 0 / 3 | 0 / 3 |
+| 5 Backlight | 0 / 2 | 0 / 2 | 0 / 2 | 0 / 2 |
+| 6 Shake | 0 / 3 | 0 / 3 | 1 / 3 | 0 / 3 |
+| 7 Partly covered | 1 / 3 | 0 / 3 | 2 / 3 | 1 / 3 |
+| 8 Motorcycle | 3 / 12 | 0 / 8 | 5 / 11 | 0 / 14 |
+| 9 Plate on a screen | 0 / 1 | 0 / 1 | 2 / 3 | 0 / 1 |
+
+False masks on the no-plate clip (one clip per model, 2 samples per second): v0 17.5 s, R1c 3.0 s, the same under both thresholds.
+
+### Mask size
+
+Measured on every frame of the 56 recordings, not sampled: a frame counts when solid black box-shaped regions (the app's mask) cover more than half of it.
+
+| model | frames | frames with masks over half the frame | fully black frames | frames with the shutter closed | clips with any frame over half |
+|---|---|---|---|---|---|
+| v0 | 10,625 | 1,843 (17.3%) | 274 (2.6%) | 264 (2.5%) | 24 / 28 |
+| R1c | 11,497 | 1,772 (15.4%) | 229 (2.0%) | 207 (1.8%) | 24 / 28 |
+
+Shutter frames are found by a sharpness threshold, so that column is an estimate. Most of the oversized masks are not the shutter: in `web/src/track/tracker.ts`, `maskRect` paints the union of the detected box and the box moved along the estimated motion, then pads it by a margin that grows for every frame since the last detection, and long-held tracks keep growing. Close plates, fast pans and plates that leave view end with masks far larger than the plate, sometimes the whole frame. Both models show it about equally; it is a tracker setting, not a detector result.
 
 ## Limitations
 
@@ -74,3 +132,7 @@ Not yet run.
 - Wall times for R1c and C3-s0 cover only the epochs after a resume.
 - The matrix was cut down to fit the free-GPU quota.
 - Internet data comes from other countries.
+- No box-level scores on the phone footage: it is not labelled, so the phone test counts leaks only.
+- Few phone clips, recorded by the family with their own vehicles; per-condition groups are examples, not evidence.
+- The phone test was scored from frames sampled at 2 per second, not every frame, so a leak shorter than half a second can be missed and uncovered frames are estimates.
+- Playback ran on a laptop GPU, not the phone; the phone runs the detector more slowly, so masks may lag more there.

@@ -1,3 +1,4 @@
+import type { ModelId } from './modelFolder'
 import type { Detection, ModelMeta } from './types'
 
 export type BackendChoice = 'auto' | 'webgpu' | 'wasm'
@@ -6,7 +7,14 @@ export type BackendUsed = 'webgpu' | 'wasm'
 export type ModelSize = 640 | 416 | 'auto'
 
 export type ToWorker =
-  | { type: 'init'; size: 640 | 416; backend: BackendUsed; threads: number; maskConf: number }
+  | {
+      type: 'init'
+      size: 640 | 416
+      backend: BackendUsed
+      threads: number
+      maskConf: number
+      model: ModelId
+    }
   | { type: 'detect'; id: number; bitmap: ImageBitmap }
   | { type: 'bench'; id: number; bitmap: ImageBitmap; runs: number }
 
