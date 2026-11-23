@@ -43,19 +43,7 @@ export function initialOptions(search = window.location.search): {
   return { size, backend }
 }
 
-const INTRO_KEY = 'cenpai.intro.seen'
-
-function introSeen(): boolean {
-  try {
-    return window.localStorage.getItem(INTRO_KEY) === '1'
-  } catch {
-    return false
-  }
-}
-
-export default function CameraTab() {
-  // First run: explain the app before the browser asks for the camera.
-  const [started, setStarted] = useState(introSeen)
+export default function CameraTab({ onAbout }: { onAbout?: () => void }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const env = useAppEnv()
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -214,7 +202,7 @@ export default function CameraTab() {
   useEffect(() => {
     const video = videoRef.current
     const canvas = canvasRef.current
-    if (!started || !video || !canvas) return
+    if (!video || !canvas) return
     if (!fileMode && !navigator.mediaDevices?.getUserMedia) {
       setCameraError('The camera is not available here. Open the app over HTTPS.')
       return
@@ -262,21 +250,12 @@ export default function CameraTab() {
       pipelineRef.current = null
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [started])
+  }, [])
 
   // Model: loads at start and again when the user picks another size or backend.
   useEffect(() => {
     pipelineRef.current?.loadModel(size, backend)
-  }, [size, backend, started])
-
-  const start = () => {
-    try {
-      window.localStorage.setItem(INTRO_KEY, '1')
-    } catch {
-      // Private mode: the note shows again next time, which is fine.
-    }
-    setStarted(true)
-  }
+  }, [size, backend])
 
   const model = stats?.model ?? null
   const debug = new URLSearchParams(window.location.search).get('debug') === '1'
@@ -564,32 +543,13 @@ export default function CameraTab() {
             Nothing leaves the phone. The camera, the plate detector and your recordings
             stay on this device.
           </p>
+          {onAbout && (
+            <button className="btn" onClick={onAbout}>
+              About CenpAI
+            </button>
+          )}
         </div>
       </div>
-
-      {!started && (
-        <div
-          className="intro"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="intro-title"
-        >
-          <div className="intro-card">
-            <h1 id="intro-title">CenpAI</h1>
-            <p>
-              Covers license plates in the camera view, live, before anything is shown.
-            </p>
-            <p className="muted">
-              Nothing leaves the phone. The camera, the plate detector and your recordings
-              stay on this device, and the app works offline once loaded.
-            </p>
-            <button className="primary" onClick={start} data-testid="start">
-              Start camera
-            </button>
-            <p className="caption">The browser will ask for camera access next.</p>
-          </div>
-        </div>
-      )}
     </section>
   )
 }

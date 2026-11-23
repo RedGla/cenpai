@@ -523,35 +523,7 @@ canvas.view {
   font-size: 13px;
 }
 
-/* First run. */
-.intro {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: calc(var(--safe-top) + 24px) calc(var(--safe-right) + 16px)
-    calc(var(--safe-bottom) + 32px) calc(var(--safe-left) + 16px);
-  background: var(--bg);
-}
-
-.intro-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: 100%;
-  max-width: 420px;
-}
-
-.intro-card h1 {
-  font-size: 32px;
-  line-height: 1.13;
-}
-
-.intro-card p {
-  margin: 0;
-}
-
+/* The lime primary action button (start page). */
 .primary {
   min-height: 52px;
   margin-top: 8px;
