@@ -3,7 +3,7 @@
 
 /**
  * Files never precached: source maps, the service worker itself, and models other than the
- * shipped `models/plate-*` (developer-only models such as `?model=r1c` load on demand).
+ * shipped `models/plate-*` (other models such as `?model=v0` load on demand and need the network).
  */
 export function shouldPrecache(path: string): boolean {
   if (path.startsWith('models/') && !path.startsWith('models/plate-')) return false

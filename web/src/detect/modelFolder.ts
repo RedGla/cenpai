@@ -1,9 +1,9 @@
 /**
- * Which model folder to load. The shipped model lives in `models/plate-<size>/`; a developer
- * URL parameter `?model=<id>` picks another locked model from an allow-list, for the phone test
- * (see docs/protocols/data_and_phone_test.md). Unknown ids fall back to the shipped model.
+ * Which model folder to load. The shipped model (R1c since decision 32) lives in
+ * `models/plate-<size>/`; a URL parameter `?model=<id>` picks another locked model from an
+ * allow-list (`?model=v0` loads the previous v0 detector). Unknown ids fall back to the shipped model.
  */
-const EXTRA_MODELS = ['r1c'] as const
+const EXTRA_MODELS = ['v0'] as const
 export type ModelId = 'plate' | (typeof EXTRA_MODELS)[number]
 
 export function modelIdFrom(search: string): ModelId {

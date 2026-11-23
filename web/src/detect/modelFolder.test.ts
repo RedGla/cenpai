@@ -8,18 +8,19 @@ describe('modelIdFrom', () => {
   })
 
   it('picks an allow-listed model', () => {
-    expect(modelIdFrom('?video=1&model=r1c')).toBe('r1c')
+    expect(modelIdFrom('?video=1&model=v0')).toBe('v0')
   })
 
   it('ignores unknown or path-like ids', () => {
     expect(modelIdFrom('?model=../../etc')).toBe('plate')
-    expect(modelIdFrom('?model=R1C')).toBe('plate')
+    expect(modelIdFrom('?model=V0')).toBe('plate')
+    expect(modelIdFrom('?model=r1c')).toBe('plate')
   })
 })
 
 describe('modelDir', () => {
   it('builds the folder from id and size', () => {
     expect(modelDir('/', 'plate', 640)).toBe('/models/plate-640/')
-    expect(modelDir('/app/', 'r1c', 416)).toBe('/app/models/r1c-416/')
+    expect(modelDir('/app/', 'v0', 416)).toBe('/app/models/v0-416/')
   })
 })
