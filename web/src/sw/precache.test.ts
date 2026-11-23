@@ -15,6 +15,11 @@ it('lists the start page, bundle files and public files, without maps or the wor
   ])
 })
 
+it('leaves developer-only models out of the precache', () => {
+  const list = precacheList([], ['models\\r1c-640\\plate_640.onnx', 'models/r1c-416/MODEL.json'])
+  expect(list).toEqual([''])
+})
+
 it('fills both placeholders in the template', () => {
   const out = renderServiceWorker(
     'const F = __PRECACHE__; const V = __VERSION__',

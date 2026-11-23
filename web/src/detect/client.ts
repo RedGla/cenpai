@@ -1,3 +1,4 @@
+import { modelIdFrom } from './modelFolder'
 import { startPlan, threadCount, type Attempt } from './plan'
 import type { BackendChoice, BackendUsed, FromWorker, ModelSize, ToWorker } from './protocol'
 import type { Detection, ModelMeta } from './types'
@@ -98,6 +99,7 @@ export class DetectorClient {
         backend: a.backend,
         threads: a.threads,
         maskConf: INTERIM_MASK_CONF,
+        model: modelIdFrom(globalThis.location?.search ?? ''),
       } satisfies ToWorker)
     })
   }
