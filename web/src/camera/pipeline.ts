@@ -1,7 +1,7 @@
 import { DetectorClient, type ReadyInfo } from '../detect/client'
 import type { BackendChoice, ModelSize } from '../detect/protocol'
 import { paintCensor, type CensorMode } from './censorStyle'
-import { HoldQueue, MAX_HELD } from './holdQueue'
+import { HoldQueue, MAX_HELD, MAX_RELEASABLE } from './holdQueue'
 import {
   activeTracks,
   countPlates,
@@ -13,9 +13,10 @@ import {
   type TrackerState,
 } from '../track/tracker'
 import { StabilityMonitor, formatRow, formatSummary, type DrawnMask } from '../track/stability'
+import { MIN_LIMIT_MS, ema, holdLimitFor, releasableFor, shutterTimeoutFor } from './timing'
 
-/** The shutter closes when no detection result has arrived for this long. */
-export const SHUTTER_TIMEOUT_MS = 300
+/** The shutter closes when no detection result has arrived for this long (at least). */
+export const SHUTTER_TIMEOUT_MS = MIN_LIMIT_MS
 /** Width in pixels of the tiny copy used to blur the shutter frame. */
 const SHUTTER_TINY_W = 40
 /** Spare frame canvases kept for reuse (held frames plus a few in flight). */
@@ -60,6 +61,13 @@ export class LivePipeline {
   private lastResultAt = 0
   /** Smoothed time between detection results (ms); stretches the timeouts on slow backends. */
   private resultInterval = 0
+  /** Smoothed spread of that interval (ms): room for jitter before the shutter closes. */
+  private intervalSpread = 0
+  /** Smoothed time from frame capture to its detection result (ms); sets the hold limit. */
+  private latency = 0
+  /** ?debug=1: blurred frames by cause, since the last counter reset. */
+  private blurByHold = 0
+  private blurByTimeout = 0
   private callbackId = 0
   private stopped = false
   /** Live detection is paused (benchmark running). */
@@ -144,6 +152,10 @@ export class LivePipeline {
     this.tracker = emptyTracker()
     this.haveResult = false
     this.resultInterval = 0
+    this.intervalSpread = 0
+    this.latency = 0
+    this.queue.setMaxHoldMs(holdLimitFor(0))
+    this.queue.setMaxReleasable(MAX_RELEASABLE)
     this.queue.resetDetections()
     this.s.loading = true
     this.s.model = null
@@ -233,8 +245,10 @@ export class LivePipeline {
       this.drawShutter(ctx, src, w, h)
       this.s.plates = 0
       if (this.debug) {
+        if (forceBlur) this.blurByHold += 1
+        else this.blurByTimeout += 1
         this.monitor.shutterFrame(t)
-        this.s.stability = formatSummary(this.monitor.summary())
+        this.s.stability = formatSummary(this.monitor.summary()) + this.blurCauses()
       }
       return
     }
@@ -251,14 +265,22 @@ export class LivePipeline {
       this.drawDebug(ctx, t)
       const rows = this.monitor.frame(t, this.tracker.tracks, drawn, keep)
       this.s.trackRows = rows.map(formatRow)
-      this.s.stability = formatSummary(this.monitor.summary()) + `, canvas resizes ${this.resizes}`
+      this.s.stability =
+        formatSummary(this.monitor.summary()) + `, canvas resizes ${this.resizes}` + this.blurCauses()
     }
+  }
+
+  /** ?debug=1: which rule blurred the frames (hold limit or no recent result). */
+  private blurCauses(): string {
+    return ` | blurred: hold ${this.blurByHold}, timeout ${this.blurByTimeout}`
   }
 
   /** ?debug=1: start the stability counters over (for a timed test scene). */
   resetStability() {
     this.monitor.reset(performance.now())
     this.resizes = 0
+    this.blurByHold = 0
+    this.blurByTimeout = 0
   }
 
   /** A pooled full-size canvas for holding one frame. */
@@ -285,9 +307,9 @@ export class LivePipeline {
     return keepTimeFor(this.resultInterval)
   }
 
-  /** Shutter closes after 300 ms without a result, or 1.5 result intervals on a slow backend. */
+  /** Shutter closes after 300 ms without a result, longer on a slow or jittery backend. */
   private shutterTimeout(): number {
-    return Math.max(SHUTTER_TIMEOUT_MS, 1.5 * this.resultInterval)
+    return shutterTimeoutFor(this.resultInterval, this.intervalSpread)
   }
 
   /** Debug only: outline each tracked box with its score (drawn on top of the masks). */
@@ -337,15 +359,22 @@ export class LivePipeline {
     this.inflight = createImageBitmap(src)
       .then((bmp) => {
         this.releaseSnapshot(held)
-        return client.detect(bmp)
+        return client.detect(bmp).then((r) => this.delayed(r, client))
       })
       .then((r) => {
         if (gen !== this.generation) return
         const arrived = performance.now()
         if (this.haveResult) {
           const gap = arrived - this.lastResultAt
-          this.resultInterval = this.resultInterval ? 0.8 * this.resultInterval + 0.2 * gap : gap
+          if (this.resultInterval) {
+            this.intervalSpread = ema(this.intervalSpread, Math.abs(gap - this.resultInterval))
+          }
+          this.resultInterval = ema(this.resultInterval, gap)
         }
+        this.latency = ema(this.latency, arrived - captureTime)
+        this.queue.setMaxHoldMs(holdLimitFor(this.latency, this.resultInterval))
+        const frameMs = this.s.fps > 0 ? 1000 / this.s.fps : 0
+        this.queue.setMaxReleasable(releasableFor(this.resultInterval, frameMs, MAX_HELD))
         this.tracker = updateTracker(
           this.tracker,
           r.detections,
@@ -358,7 +387,9 @@ export class LivePipeline {
           this.s.debug =
             `canvas ${this.canvas.width}x${this.canvas.height}, ` +
             `detector frame ${r.frameW}x${r.frameH}, ${r.detections.length} raw boxes, ` +
-            `keep ${this.keepTime().toFixed(0)} ms, shutter after ${this.shutterTimeout().toFixed(0)} ms`
+            `keep ${this.keepTime().toFixed(0)} ms, shutter after ${this.shutterTimeout().toFixed(0)} ms, ` +
+            `hold up to ${this.queue.maxHoldLimit.toFixed(0)} ms (latency ${this.latency.toFixed(0)} ms), ` +
+            `show up to ${this.queue.releasableLimit} released`
         }
         this.haveResult = true
         this.lastResultAt = arrived
@@ -374,6 +405,23 @@ export class LivePipeline {
         this.inflight = null
       })
   }
+
+  /**
+   * Test aid, ?debug=1 only: `&slow=N` holds each detection result back N ms and keeps the
+   * detector busy meanwhile, so a fast device behaves like one whose inference takes N ms
+   * longer. A late result can only blur or hold frames, never unmask a plate.
+   */
+  private delayed<T>(r: T, client: DetectorClient): Promise<T> | T {
+    if (this.slowMs === null) {
+      const n = Number(new URLSearchParams(window.location.search).get('slow'))
+      this.slowMs = this.debug && n > 0 ? Math.min(n, 2000) : 0
+    }
+    const ms = this.slowMs
+    if (!ms) return r
+    client.busy = true
+    return new Promise((ok) => window.setTimeout(() => ok(r), ms))
+  }
+  private slowMs: number | null = null
 
   private releaseSnapshot(held: HTMLCanvasElement | null) {
     if (!held || this.snapshotting !== held) return
