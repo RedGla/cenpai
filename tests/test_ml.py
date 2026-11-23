@@ -1,6 +1,7 @@
 """ml/ pipeline logic. No torch, ultralytics or transformers needed: those are only imported by the CLIs."""
 import csv
 import json
+import shutil
 
 import cv2
 import numpy as np
@@ -99,6 +100,116 @@ def test_prepare_refuses_drafts_and_skips_empties_when_required(tmp_path):
         ds.prepare({"version": "x", "sources": [{"name": "s", "path": str(src), "labels": "owlv2-draft"}]}, tmp_path / "o")
     rep = ds.prepare({"version": "y", "sources": [{"name": "s", "path": str(src), "require_boxes": True}]}, tmp_path / "o")
     assert rep["images"] == 0 and rep["unlabeled"] == 1
+
+
+def test_resolve_path_reads_the_data_setting(tmp_path, monkeypatch):
+    monkeypatch.delenv(ds.DATA_ENV, raising=False)
+    assert ds.resolve_path(tmp_path / "a") == tmp_path / "a"                   # absolute: unchanged
+    with pytest.raises(SystemExit):
+        ds.resolve_path("raw/a")                                               # relative with no data folder
+    assert ds.resolve_path("raw/a", tmp_path) == tmp_path / "raw" / "a"
+    monkeypatch.setenv(ds.DATA_ENV, str(tmp_path / "d"))
+    assert ds.resolve_path("raw/a") == tmp_path / "d" / "raw" / "a"
+
+
+def test_datasets_yaml_paths_are_relative_to_the_data_setting(monkeypatch, tmp_path):
+    import yaml
+    from pathlib import Path
+    cfg = yaml.safe_load((Path(__file__).parents[1] / "ml" / "datasets.yaml").read_text(encoding="utf-8"))
+    monkeypatch.setenv(ds.DATA_ENV, str(tmp_path))
+    names = [s["name"] for s in cfg["sources"]]
+    assert len(names) == len(set(names)) and "license-plate-detection-ph-bb-v5" in names
+    for s in cfg["sources"]:
+        assert not Path(s["path"]).is_absolute() and ":" not in s["path"], s["name"]
+        assert tmp_path in ds.resolve_path(s["path"]).parents
+        assert not (s.get("train_only") and s.get("splits")), s["name"]
+        assert set((s.get("splits") or {}).values()) <= set(ds.SPLITS)
+    assert not any("phone" in str(v).lower() for s in cfg["sources"] for v in s.values())   # family-car test clips never enter
+
+
+def test_label_kind_finds_polygons():
+    assert ds.label_kind("0 0.5 0.5 0.2 0.1\n") == "box"
+    assert ds.label_kind("0 0.1 0.1 0.3 0.1 0.3 0.3 0.1 0.3\n") == "polygon"
+    assert ds.label_kind("0 0.5 0.5 0.2 0.1\n0 0.1 0.1 0.3 0.1 0.3 0.3\n") == "mixed"
+    assert ds.label_kind("0 0.5 0.5\n") == ds.label_kind("0 a b c d\n") == "malformed"
+    assert ds.label_kind("\n") == "empty"
+
+
+def test_ccpd_label_reads_the_box_from_the_file_name():
+    name = "025-95_113-154&383_386&473-386&473_177&454_154&383_363&402-0_0_22_27_27_33_16-37-15.jpg"
+    assert ds.ccpd_label(name, 720, 1160) == "0 0.375000 0.368966 0.322222 0.077586\n"
+
+
+def _img(rng):
+    return (rng.random((48, 64, 3)) * 255).astype(np.uint8)
+
+
+def test_fixed_splits_win_and_related_training_images_are_dropped(tmp_path):
+    rng = np.random.default_rng(3)
+    ph, oi, tr, kb = tmp_path / "ph", tmp_path / "oi", tmp_path / "tr", tmp_path / "kb"
+    for i in range(40):
+        _write(ph, f"p{i}_jpg.rf.{i:04x}.png", _img(rng), "0 0.5 0.5 0.2 0.1\n")
+    (ph / "images" / "p0_jpg.rf.ffff.png").write_bytes(cv2.imencode(".png", np.flipud(_img(rng)))[1].tobytes())
+    (ph / "labels" / "p0_jpg.rf.ffff.txt").write_text("0 0.5 0.5 0.2 0.1\n")   # augmented copy: same original name
+    val_img = _img(rng)
+    _write(oi / "validation", "v1.png", val_img, "0 0.5 0.5 0.2 0.1\n")
+    near = val_img.copy()
+    near[0, 0] ^= 1
+    _write(oi / "train", "t1.png", near, "0 0.5 0.5 0.2 0.1\n")               # near duplicate of an official val image
+    _write(oi / "train", "t2.png", _img(rng), "0 0.5 0.5 0.2 0.1\n")
+    _write(oi / "test", "x1.png", _img(rng), "0 0.5 0.5 0.2 0.1\n")
+    near2 = val_img.copy()
+    near2[1, 1] ^= 1
+    _write(tr, "a.png", near2, "0 0.5 0.5 0.2 0.1\n")                          # train-only copy of the val image
+    _write(tr, "b.png", _img(rng), "0 0.5 0.5 0.2 0.1\n")
+    kb_img = _img(rng)
+    _write(kb, "k1.png", kb_img, "3 0.5 0.5 0.9 0.5\n")                       # keyboard box: dropped, image kept
+    near3 = kb_img.copy()
+    near3[2, 2] ^= 1
+    _write(kb, "k2.png", near3, "3 0.5 0.5 0.9 0.5\n")                        # near duplicate within the source: kept
+    _write(kb, "k3.png", _img(rng), "")
+    c_img = _img(rng)
+    _write(tr, "c.png", c_img, "0 0.5 0.5 0.2 0.1\n")
+    near4 = c_img.copy()
+    near4[3, 3] ^= 1
+    _write(kb, "k4.png", near4, "")                                           # near duplicate of an earlier source: dropped
+    cfg = {"version": "v", "sources": [
+        {"name": "ph", "path": "ph"},
+        {"name": "oi", "path": "oi", "splits": {"train": "train", "validation": "val", "test": "test"}},
+        {"name": "tr", "path": "tr", "train_only": True},
+        {"name": "kb", "path": "kb", "train_only": True, "negatives": True, "dedupe": True, "exclude": ["images/k3.png"]}]}
+    rep = ds.prepare(cfg, tmp_path / "out", data_root=tmp_path)
+    out = tmp_path / "out" / "v"
+    rows = {(r["source"], r["original"]): r for r in csv.DictReader(open(out / "manifest.csv", encoding="utf-8"))}
+    assert rows[("oi", "validation/images/v1.png")]["split"] == "val"
+    assert rows[("oi", "test/images/x1.png")]["split"] == "test"
+    assert rows[("oi", "train/images/t2.png")]["split"] == "train"
+    assert ("oi", "train/images/t1.png") not in rows and ("tr", "images/a.png") not in rows
+    assert rep["dropped_split_conflict"] == 2 and rep["dropped_near_duplicate"] == 1 and rep["excluded"] == 1
+    assert rows[("kb", "images/k1.png")]["boxes"] == "0" and ("kb", "images/k2.png") in rows
+    assert ("kb", "images/k4.png") not in rows and ("tr", "images/c.png") in rows
+    assert rows[("ph", "images/p0_jpg.rf.0000.png")]["split"] == rows[("ph", "images/p0_jpg.rf.ffff.png")]["split"]
+    assert {r["split"] for r in rows.values() if r["source"] == "ph"} == set(ds.SPLITS)
+    assert rep["sources"]["oi"]["val"] == {"images": 1, "boxes": 1, "negatives": 0}
+    assert (out / "val_oi.txt").read_text().startswith("./images/val/oi__")
+    assert ds.leak_report(out) == {"groups_in_more_than_one_split": 0, "eval_images_exactly_in_train": 0,
+                                   "eval_images_near_duplicate_of_train": 0, "images_in_both_val_and_test": 0}
+    extra = tmp_path / "synthetic"
+    extra.mkdir()
+    shutil.copy(out / "images" / "val" / rows[("oi", "validation/images/v1.png")]["file"], extra / "s.png")
+    assert ds.leak_report(out, [extra])["eval_images_exactly_in_train"] == 1  # the check catches a leak
+
+
+def test_max_images_samples_reproducibly(tmp_path):
+    rng = np.random.default_rng(4)
+    for i in range(20):
+        _write(tmp_path / "s", f"i{i}.png", _img(rng), "0 0.5 0.5 0.2 0.1\n")
+    cfg = {"version": "a", "sources": [{"name": "s", "path": str(tmp_path / "s"), "max_images": 7, "train_only": True}]}
+    a = ds.prepare(cfg, tmp_path / "o1", seed=5)
+    b = ds.prepare(cfg, tmp_path / "o2", seed=5)
+    assert a["images"] == b["images"] == 7
+    files = [sorted(r["original"] for r in csv.DictReader(open(o / "a" / "manifest.csv"))) for o in (tmp_path / "o1", tmp_path / "o2")]
+    assert files[0] == files[1]
 
 
 # ---------------------------------------------------------------------------------------------- evaluate

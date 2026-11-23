@@ -322,6 +322,21 @@ canvas.view {
   background: var(--surface);
 }
 
+/* ?video=1: developer file picker in place of the camera. */
+.file-pick {
+  flex-wrap: wrap;
+  max-width: 100%;
+  padding: 8px 12px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.file-pick input {
+  max-width: 100%;
+  font-size: 16px;
+  color: var(--text);
+}
+
 .saved img,
 .saved video {
   width: 52px;

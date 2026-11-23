@@ -29,3 +29,16 @@ it('skips the note after the first run and keeps settings in a sheet', () => {
   expect(screen.getByTestId('fps')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Record video' })).toBeInTheDocument()
 })
+
+it('?video=1 shows the file picker instead of asking for the camera', () => {
+  window.localStorage.setItem('cenpai.intro.seen', '1')
+  window.history.replaceState(null, '', '/?video=1')
+  try {
+    render(<CameraTab />)
+    expect(screen.getByTestId('video-file')).toBeInTheDocument()
+    // No camera request in file mode, so jsdom's missing camera is not an error here.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  } finally {
+    window.history.replaceState(null, '', '/')
+  }
+})
