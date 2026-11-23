@@ -45,8 +45,7 @@ scrcpy over USB (installed on the laptop with winget; adb comes with it):
 3. Record 10 seconds. Stop. Open the file from the gallery: plates are covered.
 4. Back to the slides: limitations (slide 9), then next steps (slide 10).
 
-Tap-to-keep is a Phase 6 feature and is **not** in v0.4: do not try it, and present it only as planned.
-
+Tap-to-keep is **not** in v0.4: do not try it, and present it only as planned.
 ## Fallback order
 
 If the live demo struggles, move down this list without stopping to debug:
@@ -64,7 +63,7 @@ If the preview is only slow, try setting **Input** to 416 (or open the app with 
 - **R1c finds more plates but adds more false masks:** its test precision at `mask_conf` (0.8765) is below v0's (0.9580) and below its own validation value (0.9029).
 - **Small evidence:** 28 final phone clips, scored from frames sampled at 2 per second, one training seed per run. The leak counts are strong signs, not proof.
 - **Training data comes partly from other countries** (Open Images, Indonesia, Vietnam, China).
-- When a plate first enters the view there can be a frame or two before it is covered. Closing this gap is Phase 6.
+- When a plate first enters the view there can be a frame or two before it is covered. Closing this gap is a planned next step.
 - Sound is never censored. Recordings are video only.
 
 ## On the day (owner, about 6 am)
