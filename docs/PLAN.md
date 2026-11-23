@@ -158,7 +158,7 @@ Opus at high effort designs the experiments, audits the split, and analyses erro
 Plate detector
 - Rebuild the dataset with `ml/dataset.py`: group images by their original source name before splitting, merge near-duplicates, 70/15/15 by group. This fixes the possible train/test overlap the paper flags.
 - Recover the 576 rejected label files. They are probably polygons; convert them to boxes and re-check.
-- Build the primary dataset with `primary-dataset-protocol.md`: 60-100 plates shot 6-10 ways on the S23+, plus photos with no plate, split 60/20/20 by plate. Its training split covers the conditions v0 failed on; its validation split chooses thresholds and synthetic data; its test split is scored once.
+- ~~Build the primary dataset with `primary-dataset-protocol.md`.~~ Replaced on 2026-11-22 (decision 31): no vehicle photos for the dataset. Training adds licensed internet sets and synthetic data, choices are made on public validation splits, and family-car videos are used only for the phone test (`docs/protocols/data_and_phone_test.md`).
 - Compare YOLOv8n, YOLOv8s, YOLO11n, YOLO11s (the paper's set) plus YOLO26n, a newer model built for edge devices that needs no NMS step. Same data, same budget, three seeds each.
 - Ablations, each scored on accuracy and on phone latency: starting weights (COCO versus a public plate checkpoint such as `morsetechlab/yolov11-license-plate-detection`), input size (320, 416, 640), and number format (32-bit, 16-bit, 8-bit).
 

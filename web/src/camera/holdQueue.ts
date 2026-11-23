@@ -65,6 +65,24 @@ export class HoldQueue<T> {
     if (seq > this.detected) this.detected = seq
   }
 
+  /** Change the age limit (ms) for held frames; it follows the measured detector latency. */
+  setMaxHoldMs(ms: number) {
+    this.maxHoldMs = ms
+  }
+
+  get maxHoldLimit(): number {
+    return this.maxHoldMs
+  }
+
+  /** How many released frames may wait to be shown before older ones are skipped. */
+  setMaxReleasable(n: number) {
+    this.maxReleasable = n
+  }
+
+  get releasableLimit(): number {
+    return this.maxReleasable
+  }
+
   /** Forget detections (new model): held frames wait for the new detector. */
   resetDetections() {
     this.detected = -1

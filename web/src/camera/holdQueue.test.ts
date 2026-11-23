@@ -100,4 +100,34 @@ describe('HoldQueue', () => {
     expect(r.show?.seq).toBe(3)
     expect(r.recycle.map((h) => h.seq)).toEqual([0, 1, 2])
   })
+
+  it('waits longer for a slow detector once the hold limit is raised', () => {
+    // Laptop case: the detection for a frame arrives about 300 ms after capture.
+    const q = new HoldQueue<number>()
+    q.setMaxHoldMs(450)
+    q.push(0, 0)
+    expect(q.take(320).show).toBeNull()
+    q.markDetected(0)
+    const r = q.take(330)
+    expect(r.show?.seq).toBe(0)
+    expect(r.blurred).toBe(false)
+  })
+
+  it('shows every released frame in turn when the releasable cap is raised', () => {
+    const q = new HoldQueue<number>()
+    q.setMaxReleasable(8)
+    for (let i = 0; i < 6; i++) q.push(i, i * 50)
+    q.markDetected(5)
+    const shown = [0, 1, 2, 3, 4, 5].map(() => q.take(300).show?.seq)
+    expect(shown).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('still releases blurred past the raised limit (fail closed)', () => {
+    const q = new HoldQueue<number>()
+    q.setMaxHoldMs(450)
+    q.push(0, 0)
+    const r = q.take(451)
+    expect(r.show?.seq).toBe(0)
+    expect(r.blurred).toBe(true)
+  })
 })

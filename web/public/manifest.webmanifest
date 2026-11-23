@@ -3,12 +3,12 @@
   "short_name": "CenpAI",
   "description": "Covers license plates in the camera view on the phone.",
   "id": "/",
-  "start_url": "/",
+  "start_url": "/?camera",
   "scope": "/",
   "display": "fullscreen",
   "display_override": ["fullscreen", "standalone"],
-  "background_color": "#111111",
-  "theme_color": "#111111",
+  "background_color": "#08090a",
+  "theme_color": "#08090a",
   "icons": [
     {
       "src": "icons/icon-192.png",

@@ -1,8 +1,12 @@
 // Builds the list of files the service worker downloads at install, so the app, the
 // onnxruntime-web files and both plate models work with no network after one online load.
 
-/** Files never precached: source maps and the service worker itself. */
+/**
+ * Files never precached: source maps, the service worker itself, and models other than the
+ * shipped `models/plate-*` (other models such as `?model=v0` load on demand and need the network).
+ */
 export function shouldPrecache(path: string): boolean {
+  if (path.startsWith('models/') && !path.startsWith('models/plate-')) return false
   return !path.endsWith('.map') && path !== 'sw.js' && !path.startsWith('.')
 }
 
